@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
 // Minimal assertions for the gjs unit tests — no test framework is available
 // to plain gjs, and these tests only need equality checks.
 import System from 'system';

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
 // Turns GNOME's workspace names into the texts the strip shows. Free of
 // GNOME imports so the unit tests can run it with plain gjs.
 

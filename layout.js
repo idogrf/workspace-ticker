@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
 // Layout maths for the ticker strip. Kept free of GNOME imports so the unit
 // tests can run it with plain gjs.
 

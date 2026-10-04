@@ -164,6 +164,26 @@ Gear icon in Extensions Manager. All are live, no logout.
 
 A blank `unnamed-format` falls back to the bare number, never a blank label.
 
+## Install
+
+Workspace Ticker is not on extensions.gnome.org. Download
+`workspace-ticker@idogr.shell-extension.zip` from the latest
+[release](https://github.com/idogrf/workspace-ticker/releases), then:
+
+```bash
+gnome-extensions install --force workspace-ticker@idogr.shell-extension.zip
+```
+
+Log out and back in (Wayland), then:
+
+```bash
+gnome-extensions enable workspace-ticker@idogr
+```
+
+To build the zip yourself, run `sh pack.sh` from the repo root. It writes
+`dist/workspace-ticker@idogr.shell-extension.zip` with only the files the
+extension needs at runtime.
+
 ## Install (development)
 
 ```bash

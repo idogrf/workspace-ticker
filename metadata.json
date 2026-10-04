@@ -2,6 +2,7 @@
   "uuid": "workspace-ticker@idogr",
   "name": "Workspace Ticker",
   "description": "Shows a strip of workspace names at the bottom of the screen whenever you switch workspaces. The current workspace is large and centred, its neighbours smaller on either side, and the strip slides smoothly to the new one before fading out. Names come from GNOME's own workspace-names setting, so it works with Space Bar or on its own.",
+  "url": "https://github.com/idogrf/workspace-ticker",
   "shell-version": ["50"],
   "settings-schema": "org.gnome.shell.extensions.workspace-ticker",
   "version": 1

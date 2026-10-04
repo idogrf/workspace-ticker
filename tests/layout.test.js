@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
 import {computeLayout, NEIGHBOUR_SCALE} from '../layout.js';
 import {check, near, finish} from './assert.js';
 

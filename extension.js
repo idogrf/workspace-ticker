@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
 import Gio from 'gi://Gio';
 import Meta from 'gi://Meta';
 

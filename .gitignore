@@ -2,3 +2,5 @@
 schemas/gschemas.compiled
 # headless test runs
 tools/headless/runs/
+# release zip — build with: ./pack.sh
+dist/
