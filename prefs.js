@@ -16,10 +16,13 @@ export default class WorkspaceTickerPreferences extends ExtensionPreferences {
         // The settings object outlives the window, so drop the handlers
         // that point at its widgets.
         window.connect('close-request', () => {
+            settings.set_boolean('preview', false);
             this._handlerIds.forEach(id => settings.disconnect(id));
             this._handlerIds = [];
             return false;
         });
+        // Keeps the pill up while the window is open, so changes show live.
+        settings.set_boolean('preview', true);
     }
 
     _spinRow(settings, key, title, subtitle, lower, upper, step) {

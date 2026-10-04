@@ -104,6 +104,14 @@ workspaces are primary-only. It is skipped while the **overview** is open,
 which has its own workspace UI, and when that monitor has a **fullscreen**
 window, which it should not cover.
 
+### Preferences preview
+
+While the preferences window is open the pill stays up on the current
+workspace and monitor, and every change you make updates it live. It fades out
+when the window closes. This is driven by an internal `preview` key that the
+window sets; the extension resets it when enabled, so a crashed preferences
+window cannot leave the pill stuck.
+
 ## Placement
 
 By default the strip sits `dock-gap` pixels above the dock. It looks for Dash

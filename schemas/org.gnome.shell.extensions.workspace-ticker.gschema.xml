@@ -210,5 +210,12 @@
       <description>Hides the dots of the other workspaces, leaving just the
       current one, which fades in and out with the slide.</description>
     </key>
+
+    <key name="preview" type="b">
+      <default>false</default>
+      <summary>Preview (internal)</summary>
+      <description>Set by the preferences window while it is open, to keep the
+      pill on screen so changes show live. Reset when the extension is enabled.</description>
+    </key>
   </schema>
 </schemalist>

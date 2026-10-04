@@ -14,6 +14,8 @@ export default class WorkspaceTickerExtension extends Extension {
         // this works with or without Space Bar.
         this._wmSettings = new Gio.Settings({schema_id: 'org.gnome.desktop.wm.preferences'});
         this._mutterSettings = new Gio.Settings({schema_id: 'org.gnome.mutter'});
+        // A prefs window that crashed must not leave the pill pinned.
+        this._settings.set_boolean('preview', false);
         this._ticker = new Ticker(this._settings);
         this._activeIndex = global.workspace_manager.get_active_workspace_index();
 
@@ -23,7 +25,14 @@ export default class WorkspaceTickerExtension extends Extension {
             this);
         this._wmSettings.connectObject('changed::workspace-names', () => this._refresh(), this);
         this._mutterSettings.connectObject('changed::dynamic-workspaces', () => this._refresh(), this);
-        this._settings.connectObject('changed', () => this._refresh(), this);
+        // 'preview' has its own handler; it must not also trigger a rebuild.
+        this._settings.connectObject(
+            'changed', (_settings, key) => {
+                if (key !== 'preview')
+                    this._refresh();
+            },
+            'changed::preview', () => this._onPreview(),
+            this);
     }
 
     disable() {
@@ -71,6 +80,22 @@ export default class WorkspaceTickerExtension extends Extension {
 
         const labels = this._labels();
         this._ticker.show(monitor, labels, Math.min(from, labels.length - 1), to);
+    }
+
+    // Preferences open: keep the pill up on the current workspace, snapped
+    // into place, so settings changes show live. Closed: let it fade out.
+    _onPreview() {
+        if (this._settings.get_boolean('preview')) {
+            const monitor = this._monitor();
+            if (!monitor || monitor.inFullscreen)
+                return;
+            const index = global.workspace_manager.get_active_workspace_index();
+            const labels = this._labels();
+            this._ticker.pin();
+            this._ticker.show(monitor, labels, Math.min(index, labels.length - 1), index);
+        } else {
+            this._ticker.unpin();
+        }
     }
 
     // Workspaces added, removed or renamed, or a setting changed: rebuild in

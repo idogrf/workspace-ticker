@@ -60,6 +60,7 @@ export class Ticker {
         this._widths = [];
         this._texts = [];
         this._hideId = 0;
+        this._pinned = false;
         this._custom = false;
         this._nameColor = null;
         this._neighbourColor = null;
@@ -152,6 +153,22 @@ export class Ticker {
             mode: Clutter.AnimationMode.EASE_OUT_QUAD,
         });
         this._scheduleHide(animation + this._settings.get_int('display-duration'));
+    }
+
+    /** Keeps the pill up: no hide timer runs until `unpin()`. */
+    pin() {
+        this._pinned = true;
+        if (this._hideId) {
+            GLib.source_remove(this._hideId);
+            this._hideId = 0;
+        }
+    }
+
+    /** Lets the pill go: schedules the normal fade-out. */
+    unpin() {
+        this._pinned = false;
+        if (this._pill.visible)
+            this._scheduleHide(this._settings.get_int('display-duration'));
     }
 
     /** Rebuilds the strip in place and snaps to `index`, without animating. */
@@ -443,6 +460,10 @@ export class Ticker {
     _scheduleHide(delay) {
         if (this._hideId)
             GLib.source_remove(this._hideId);
+        if (this._pinned) {
+            this._hideId = 0;
+            return;
+        }
         this._hideId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, delay, () => {
             this._hideId = 0;
             this._pill.ease({
