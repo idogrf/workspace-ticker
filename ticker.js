@@ -8,6 +8,8 @@ import {computeLayout} from './layout.js';
 
 const FADE_IN_MS = 100;
 const FADE_OUT_MS = 250;
+// Vertical padding of .workspace-ticker-pill.with-dots in stylesheet.css.
+const DOTS_PADDING = 16;
 
 /**
  * The pill at the bottom of the screen and the strip of names inside it.
@@ -22,6 +24,7 @@ export class Ticker {
     constructor(settings) {
         this._settings = settings;
         this._labels = [];
+        this._dots = [];
         this._widths = [];
         this._texts = [];
         this._hideId = 0;
@@ -38,6 +41,18 @@ export class Ticker {
         });
         this._strip = new Clutter.Actor({x_expand: true, y_expand: true});
         this._pill.add_child(this._strip);
+        // Pinned to the bottom, inside the pill's bottom padding, so it never
+        // moves the name off the vertical centre. The pill's padding shrinks
+        // the area a child is laid out in, so _setLabels pushes the row down
+        // by DOTS_PADDING to sit 5px above the pill's real bottom edge.
+        this._dotRow = new St.BoxLayout({
+            style: 'spacing: 6px;',
+            x_align: Clutter.ActorAlign.CENTER,
+            y_align: Clutter.ActorAlign.END,
+            y_expand: true,
+            margin_bottom: 5,
+        });
+        this._pill.add_child(this._dotRow);
         Main.layoutManager.uiGroup.add_child(this._pill);
 
         this._position = new St.Adjustment({actor: this._pill, lower: 0, upper: 0, value: 0});
@@ -93,7 +108,9 @@ export class Ticker {
         this._pill.destroy();
         this._pill = null;
         this._strip = null;
+        this._dotRow = null;
         this._labels = [];
+        this._dots = [];
         this._position = null;
         this._settings = null;
     }
@@ -101,7 +118,8 @@ export class Ticker {
     // Width first, because the layout centres on it; then labels; then the
     // vertical position, which depends on the label height.
     _build(monitor, texts, index) {
-        const width = Math.round(monitor.width * this._settings.get_int('strip-width') / 100);
+        const width = Math.round(this._settings.get_double('strip-width-em') *
+            this._settings.get_int('font-size'));
         this._pill.width = width;
         this._setLabels(texts, index);
 
@@ -133,6 +151,19 @@ export class Ticker {
         });
         this._widths = this._labels.map(label => label.get_preferred_width(-1)[1]);
 
+        const showDots = this._settings.get_boolean('show-dots');
+        if (showDots)
+            this._pill.add_style_class_name('with-dots');
+        else
+            this._pill.remove_style_class_name('with-dots');
+        this._dotRow.translation_y = showDots ? DOTS_PADDING : 0;
+        this._dotRow.destroy_all_children();
+        this._dots = showDots ? texts.map(() => {
+            const dot = new St.Widget({style_class: 'workspace-ticker-dot'});
+            this._dotRow.add_child(dot);
+            return dot;
+        }) : [];
+
         this._position.remove_transition('value');
         this._position.upper = Math.max(texts.length - 1, 0);
         this._position.value = index;
@@ -150,6 +181,14 @@ export class Ticker {
             label.translation_x = center - this._widths[i] / 2;
             label.set_scale(scale, scale);
             label.opacity = opacity;
+        });
+
+        // Same fractional position as the names, so the wide dot slides in step.
+        const p = this._position.value;
+        this._dots.forEach((dot, i) => {
+            const k = Math.max(0, 1 - Math.abs(i - p));
+            dot.width = 6 + 10 * k;
+            dot.opacity = Math.round(255 * (0.4 + 0.6 * k));
         });
     }
 

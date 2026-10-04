@@ -7,6 +7,18 @@
     padding: 10px 0;
 }
 
+/* Symmetric padding keeps the name vertically centred; the dots are placed
+   inside the larger bottom padding instead of adding a row under the name. */
+.workspace-ticker-pill.with-dots {
+    padding: 16px 0;
+}
+
+.workspace-ticker-dot {
+    background-color: #ffffff;
+    border-radius: 3px;
+    height: 6px;
+}
+
 .workspace-ticker-label {
     color: #ffffff;
 }

@@ -38,8 +38,18 @@ shifted so the position sits at the pill's centre. Because slide and grow come
 from the same number they stay in step, and a new switch mid-animation starts
 from wherever the strip currently is, with no snap back.
 
-Names fade out over the outer 15% of the pill at each edge, so a long list is
-clipped softly. The pill fades in over 100 ms and out over 250 ms.
+The pill is narrow: `strip-width-em` times the font size wide (7.5 × 24 px =
+180 px by default), room for about three names. The neighbours only peek in at
+the edges, so names fade out over the outer 30% of the pill at each side. The
+pill fades in over 100 ms and out over 250 ms.
+
+Under the name, a row of dots (one per workspace in the strip, so the hidden
+dynamic spare gets none) shows where you are out of how many. Each dot's width
+and opacity come from the same fractional position as the names, in the same
+`_relayout()` call, so the wide dot moves in step with the slide. The name is
+vertically centred whether the dots are on or off: the pill has equal padding
+above and below (16 px with dots, 10 px without) and the dots sit inside the
+bottom padding rather than adding a row under the name.
 
 Two details that are easy to get wrong:
 
@@ -70,7 +80,8 @@ Gear icon in Extensions Manager. All are live, no logout.
 | Slide duration (ms, 0-1000; 0 jumps) | `animation-duration` | `250` |
 | Distance from the bottom edge (% of monitor height, 0-50) | `bottom-offset` | `10` |
 | Font size of the current name (px, 12-72) | `font-size` | `24` |
-| Strip width (% of monitor width, 20-100) | `strip-width` | `40` |
+| Strip width (multiples of the font size, 4.0-20.0) | `strip-width-em` | `7.5` |
+| Show the position dots under the name | `show-dots` | `true` |
 | Label for unnamed workspaces | `unnamed-format` | `{number}` |
 
 A blank `unnamed-format` falls back to the bare number, never a blank label.
@@ -126,9 +137,12 @@ with `&&`:
 
 ## Known issues
 
-- GNOME's own switcher dots can overlap the pill at the default `bottom-offset`
-  on short screens (seen at 800 px tall). Raise `bottom-offset` if it bothers
-  you.
+- GNOME's own switcher dots still overlap the pill at the default
+  `bottom-offset` of 10 on short screens. Seen in the headless shell at
+  1280 × 800: 0.3 s after a switch GNOME's dots sit over the lower half of the
+  pill and cover the name, and they are gone about a second later. The
+  narrower pill does not avoid it, since it is centred on the same spot. Raise
+  `bottom-offset` (30 clears them at that size) if it bothers you.
 
 ## Uninstall
 

@@ -6,7 +6,7 @@ export const NEIGHBOUR_SCALE = 0.6;
 // Space between labels, relative to the font size so it grows with the text.
 const GAP_RATIO = 0.6;
 // Labels fade out over this share of the pill width at each edge.
-const EDGE_FADE_RATIO = 0.15;
+const EDGE_FADE_RATIO = 0.30;
 
 /**
  * Places every label for strip position `position`, a fractional index:

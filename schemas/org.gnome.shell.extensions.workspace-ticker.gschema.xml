@@ -33,12 +33,19 @@
       <description>Neighbouring names are drawn at 0.6 of this size.</description>
     </key>
 
-    <key name="strip-width" type="i">
-      <default>40</default>
-      <range min="20" max="100"/>
-      <summary>Strip width, in percent</summary>
-      <description>Width of the strip as a percentage of the monitor's width.
-      Names beyond it fade out at the edges.</description>
+    <key name="strip-width-em" type="d">
+      <default>7.5</default>
+      <range min="4.0" max="20.0"/>
+      <summary>Strip width, in multiples of the font size</summary>
+      <description>The pill is this many times the current font size wide
+      (7.5 × 24 px = 180 px). Names beyond it fade out at the edges.</description>
+    </key>
+
+    <key name="show-dots" type="b">
+      <default>true</default>
+      <summary>Show position dots</summary>
+      <description>A row of dots under the name shows which workspace is
+      current out of how many.</description>
     </key>
 
     <key name="unnamed-format" type="s">

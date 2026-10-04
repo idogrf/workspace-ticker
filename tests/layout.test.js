@@ -30,21 +30,28 @@ import {check, near, finish} from './assert.js';
     check('first: others to the right', items.slice(1).every(i => i.center > 300));
 }
 
-// Edge fade: pill 300 → fade over 45px each side. Centres 150, 242, 314…
+// Edge fade: pill 300 → fade over 90px each side. Centres 150, 242, 314…
+// The second label is 58px from the right edge → round(255 * 58 / 90) = 164.
 {
     const items = computeLayout([100, 100, 100, 100], 0, 20, 300);
     check('fade: centre opaque', items[0].opacity === 255);
-    check('fade: inside fade zone stays opaque', items[1].opacity === 255);
+    check('fade: inside fade zone is partial', items[1].opacity === 164);
     check('fade: past the edge invisible', items[2].opacity === 0 && items[3].opacity === 0);
 }
 
-// Partially inside the fade zone: pill 600, fade 90. Current 100px label
+// Pill 600 → fade 180. Centres 300, 392: 208px from the edge, outside the zone.
+{
+    const items = computeLayout([100, 100, 100], 0, 20, 600);
+    check('fade: outside fade zone stays opaque', items[1].opacity === 255);
+}
+
+// Partially inside the fade zone: pill 600, fade 180. Current 100px label
 // raw centre 50, shift 250. Next label 600px at 0.6 → raw centre
 // 100 + 12 + 180 = 292 → 542, i.e. 58 from the right edge →
-// opacity round(255 * 58 / 90) = 164.
+// opacity round(255 * 58 / 180) = 82.
 {
     const items = computeLayout([100, 600], 0, 20, 600);
-    check('fade: part way through fade zone', items[1].opacity === 164);
+    check('fade: part way through fade zone', items[1].opacity === 82);
 }
 
 // Position beyond the end (list shrank under us) clamps to the last label.

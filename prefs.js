@@ -41,9 +41,14 @@ export default class WorkspaceTickerPreferences extends ExtensionPreferences {
         appearance.add(spinRow('font-size', 'Font size',
             'Pixels, for the current name. Neighbours are drawn at 0.6 of it.',
             12, 72, 1));
-        appearance.add(spinRow('strip-width', 'Strip width',
-            'Percent of the screen width. Names beyond it fade out.',
-            20, 100, 1));
+        const widthRow = spinRow('strip-width-em', 'Strip width',
+            'Multiples of the font size. 7.5 fits about three names.',
+            4, 20, 0.5);
+        widthRow.digits = 1;
+        appearance.add(widthRow);
+        const dotsRow = new Adw.SwitchRow({title: 'Show position dots'});
+        settings.bind('show-dots', dotsRow, 'active', Gio.SettingsBindFlags.DEFAULT);
+        appearance.add(dotsRow);
 
         const naming = new Adw.PreferencesGroup({
             title: 'Unnamed workspaces',
