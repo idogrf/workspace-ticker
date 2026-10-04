@@ -82,6 +82,17 @@ workspaces are primary-only. It is skipped while the **overview** is open,
 which has its own workspace UI, and when that monitor has a **fullscreen**
 window, which it should not cover.
 
+## Placement
+
+By default the strip sits `dock-gap` pixels above the dock. It looks for Dash
+to Dock's (or Ubuntu Dock's) container on the strip's monitor, and counts it as
+a bottom dock when it is wider than tall and ends at the monitor's bottom edge.
+Auto-hide does not move the strip: the container collapses to nothing while
+the dock is hidden, so the height used is the dock's own (dash) height, which
+does not change. With no bottom dock (or
+`above-dock` off) the strip uses `bottom-offset`. The dock is only read, never
+changed, and is looked up again on every show.
+
 ## Settings
 
 Gear icon in Extensions Manager. All are live, no logout.
@@ -90,7 +101,9 @@ Gear icon in Extensions Manager. All are live, no logout.
 |---|---|---|
 | Time the strip stays up after the slide (ms, 300-5000) | `display-duration` | `1000` |
 | Slide duration (ms, 0-1000; 0 jumps) | `animation-duration` | `250` |
-| Distance from the bottom edge (% of monitor height, 0-50) | `bottom-offset` | `10` |
+| Sit above a bottom dock when there is one | `above-dock` | `true` |
+| Gap between the dock's top and the strip (px, 0-200) | `dock-gap` | `12` |
+| Distance from the bottom edge (% of monitor height, 0-50); used when there is no dock or `above-dock` is off | `bottom-offset` | `10` |
 | Font size of the current name (px, 12-72) | `font-size` | `24` |
 | Strip width (multiples of the font size, 4.0-20.0) | `strip-width-em` | `7.5` |
 | Show the position dots under the name | `show-dots` | `true` |
@@ -127,7 +140,8 @@ Shell** with a D-Bus driver for keys and screenshots. It never touches the real
 session: private bus, private dconf, private extensions directory.
 
 ```bash
-tools/headless/start.sh
+tools/headless/start.sh                # TICKER_WITH_DOCK=1 also loads your Dash to Dock, read-only
+                                       # (then wait about 6 s before Escape)
 tools/headless/send.sh 'key ff1b'      # the shell starts in the overview: Escape,
 sleep 1                                # then wait about a second
 tools/headless/send.sh 'shot /tmp/a.png'
@@ -155,12 +169,14 @@ with `&&`:
 
 ## Known issues
 
-- GNOME's own switcher dots still overlap the pill at the default
-  `bottom-offset` of 10 on short screens. Seen in the headless shell at
-  1280 × 800: 0.3 s after a switch GNOME's dots sit over the lower half of the
-  pill and cover the name, and they are gone about a second later. The
-  narrower pill does not avoid it, since it is centred on the same spot. Raise
-  `bottom-offset` (30 clears them at that size) if it bothers you.
+- GNOME's own switcher dots can still overlap the pill for about a second
+  after a switch. Seen in the headless shell at 1280 x 800: 0.3 s after a
+  switch they sit over the pill's lower edge. With a bottom dock and the
+  default `dock-gap` of 12 the overlap is only the pill's bottom 12 px (the
+  name stays clear, the pill's own dots are covered). Without a dock, at the
+  default `bottom-offset` of 10, they cover the lower half of the pill
+  and the name. Raise `dock-gap` (to about 60) or `bottom-offset` (30 clears
+  them at that size) if it bothers you.
 
 ## Uninstall
 

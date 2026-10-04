@@ -36,8 +36,17 @@ export default class WorkspaceTickerPreferences extends ExtensionPreferences {
             0, 1000, 25));
 
         const appearance = new Adw.PreferencesGroup({title: 'Appearance'});
+        const aboveDockRow = new Adw.SwitchRow({title: 'Sit above the dock'});
+        settings.bind('above-dock', aboveDockRow, 'active', Gio.SettingsBindFlags.DEFAULT);
+        appearance.add(aboveDockRow);
+        const gapRow = spinRow('dock-gap', 'Gap above dock',
+            'Pixels between the top of the dock and the strip.',
+            0, 200, 1);
+        settings.bind('above-dock', gapRow, 'sensitive', Gio.SettingsBindFlags.GET);
+        appearance.add(gapRow);
         appearance.add(spinRow('bottom-offset', 'Distance from bottom',
-            'Percent of the screen height between the bottom edge and the strip.',
+            'Percent of the screen height between the bottom edge and the strip. ' +
+            'Applies when there is no dock, or "Sit above the dock" is off.',
             0, 50, 1));
         appearance.add(spinRow('font-size', 'Font size',
             'Pixels, for the current name. Neighbours are drawn at 0.6 of it.',

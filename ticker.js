@@ -135,10 +135,42 @@ export class Ticker {
         this._setLabels(texts, index);
 
         const [, height] = this._pill.get_preferred_height(width);
-        const bottomGap = Math.round(monitor.height * this._settings.get_int('bottom-offset') / 100);
         this._pill.set_position(
             monitor.x + Math.round((monitor.width - width) / 2),
-            monitor.y + monitor.height - bottomGap - height);
+            this._bottomEdge(monitor) - height);
+    }
+
+    // Pill bottom in stage coordinates: above a bottom dock when asked to,
+    // else bottom-offset percent up from the monitor's bottom.
+    _bottomEdge(monitor) {
+        if (this._settings.get_boolean('above-dock')) {
+            const dockTop = this._dockTop(monitor);
+            if (dockTop !== null)
+                return dockTop - this._settings.get_int('dock-gap');
+        }
+        return monitor.y + monitor.height -
+            Math.round(monitor.height * this._settings.get_int('bottom-offset') / 100);
+    }
+
+    // Top of Dash to Dock's (or Ubuntu Dock's) bottom dock on this monitor, or
+    // null. Only public geometry is read. The container is not measured for
+    // height: while the dock is auto-hidden it collapses to 0 tall at the
+    // monitor's bottom (checked in the headless shell), which would make the
+    // pill jump down. The dash's natural height is the same whether the dock
+    // is shown or hidden.
+    _dockTop(monitor) {
+        const monitors = Main.layoutManager.monitors;
+        const dock = Main.layoutManager.uiGroup.get_children().find(actor =>
+            actor.name === 'dashtodockContainer' &&
+            monitors[actor.monitorIndex] === monitor);
+        if (!dock || !dock.dash)
+            return null;
+        const [, y] = dock.get_transformed_position();
+        const [w, h] = dock.get_transformed_size();
+        const [, dashHeight] = dock.dash.get_preferred_height(-1);
+        if (w <= dashHeight || Math.abs(y + h - (monitor.y + monitor.height)) > 2)
+            return null;
+        return monitor.y + monitor.height - dashHeight;
     }
 
     _setLabels(texts, index) {

@@ -1,6 +1,7 @@
 #!/bin/bash
 # Start an isolated headless GNOME Shell with this extension and the driver.
-# Usage: tools/headless/start.sh   (TICKER_DYNAMIC=true for dynamic workspaces)
+# Usage: tools/headless/start.sh   (TICKER_DYNAMIC=true for dynamic workspaces,
+# TICKER_WITH_DOCK=1 to also load the user's Dash to Dock read-only)
 set -e
 HEADLESS_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO="$(cd "$HEADLESS_DIR/../.." && pwd)"
@@ -15,6 +16,13 @@ mkdir -p "$RUN_DIR"/{config,data/gnome-shell/extensions,cache,state}
 
 glib-compile-schemas "$REPO/schemas"
 ln -s "$REPO" "$RUN_DIR/data/gnome-shell/extensions/workspace-ticker@idogr"
+# Opt-in: also load the user's Dash to Dock, read-only. Only a symlink: nothing
+# in the dock's directory is written or compiled (its schemas must already be).
+if [ -n "$TICKER_WITH_DOCK" ]; then
+    DOCK="$HOME/.local/share/gnome-shell/extensions/dash-to-dock-ido@idogr"
+    [ -f "$DOCK/schemas/gschemas.compiled" ] || { echo "dock schemas not compiled in $DOCK/schemas" >&2; exit 1; }
+    ln -s "$DOCK" "$RUN_DIR/data/gnome-shell/extensions/dash-to-dock-ido@idogr"
+fi
 
 # Real-session guard: record the real extension list now, compare in stop.sh.
 gsettings get org.gnome.shell enabled-extensions > "$RUN_DIR/real-enabled.before"

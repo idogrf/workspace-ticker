@@ -26,6 +26,22 @@
       the strip, as a percentage of the monitor's height.</description>
     </key>
 
+    <key name="above-dock" type="b">
+      <default>true</default>
+      <summary>Sit above the dock</summary>
+      <description>When a Dash to Dock or Ubuntu Dock is on the bottom of
+      the strip's monitor, place the strip above it; otherwise bottom-offset
+      applies.</description>
+    </key>
+
+    <key name="dock-gap" type="i">
+      <default>12</default>
+      <range min="0" max="200"/>
+      <summary>Gap above the dock, in pixels</summary>
+      <description>Pixels between the top of the dock and the bottom of the
+      strip.</description>
+    </key>
+
     <key name="font-size" type="i">
       <default>24</default>
       <range min="12" max="72"/>
