@@ -2,6 +2,13 @@
 # private bus, private dconf, private extension directory.
 HEADLESS_DIR="$(cd "$(dirname "${BASH_SOURCE:-$0}")" && pwd)"
 RUN_DIR="$HEADLESS_DIR/runs/current"
+# Refuse when no run is active: otherwise the caller's real bus and Wayland socket
+# stay in place and a following `gsettings set` would hit the real session.
+# start.sh and inner.sh run before the bus is recorded, so they opt out.
+if [ -z "$HEADLESS_ALLOW_NO_BUS" ] && { [ ! -f "$RUN_DIR/bus" ] || [ ! -e "$RUN_DIR/shell.pid" ]; }; then
+    echo "env.sh: no active headless run (start tools/headless/start.sh first)" >&2
+    return 1
+fi
 export RUN_DIR
 export XDG_CONFIG_HOME="$RUN_DIR/config"
 export XDG_DATA_HOME="$RUN_DIR/data"

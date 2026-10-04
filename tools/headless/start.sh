@@ -14,27 +14,31 @@ rm -rf "$RUN_DIR"
 mkdir -p "$RUN_DIR"/{config,data/gnome-shell/extensions,cache,state}
 
 glib-compile-schemas "$REPO/schemas"
-ls "$XDG_RUNTIME_DIR" | grep -E '^wayland-[0-9]+$' | sort > "$RUN_DIR/wayland.before" || true
 ln -s "$REPO" "$RUN_DIR/data/gnome-shell/extensions/workspace-ticker@idogr"
 
 # Real-session guard: record the real extension list now, compare in stop.sh.
 gsettings get org.gnome.shell enabled-extensions > "$RUN_DIR/real-enabled.before"
 
 (
-    . "$HEADLESS_DIR/env.sh"
+    HEADLESS_ALLOW_NO_BUS=1 . "$HEADLESS_DIR/env.sh"
     unset DBUS_SESSION_BUS_ADDRESS
     setsid dbus-run-session -- bash "$HEADLESS_DIR/inner.sh" > "$RUN_DIR/shell.log" 2>&1 &
     echo $! > "$RUN_DIR/shell.pid"
 )
 
+# From here on, any failure tears down what was just started (via stop.sh).
+trap 'rc=$?; if [ $rc -ne 0 ]; then echo "start failed; running stop.sh" >&2; bash "$HEADLESS_DIR/stop.sh" >&2; fi' EXIT
+
 for _ in $(seq 100); do [ -s "$RUN_DIR/bus" ] && break; sleep 0.2; done
 [ -s "$RUN_DIR/bus" ] || { echo "shell did not start; see $RUN_DIR/shell.log" >&2; exit 1; }
-# Give the shell time to bring up DisplayConfig/RemoteDesktop before the driver connects.
-sleep 4
-
-# The socket that appeared since launch is the headless shell's.
-ls "$XDG_RUNTIME_DIR" | grep -E '^wayland-[0-9]+$' | sort | comm -13 "$RUN_DIR/wayland.before" - | head -1 > "$RUN_DIR/wayland"
-[ -s "$RUN_DIR/wayland" ] || { echo "could not find the headless shell's wayland socket" >&2; exit 1; }
+# Take the socket name from this run's own log: another headless shell may be
+# running on the machine, so diffing the runtime dir could pick the wrong one.
+for _ in $(seq 100); do
+    sed -n "s/.*Using Wayland display name '\(wayland-[0-9]*\)'.*/\1/p" "$RUN_DIR/shell.log" | head -1 > "$RUN_DIR/wayland"
+    [ -s "$RUN_DIR/wayland" ] && break
+    sleep 0.2
+done
+[ -s "$RUN_DIR/wayland" ] || { echo "headless shell never reported its wayland socket; see $RUN_DIR/shell.log" >&2; exit 1; }
 
 RUN_DIR="$RUN_DIR" setsid /usr/bin/python3 "$HEADLESS_DIR/driver.py" > "$RUN_DIR/driver.out" 2>&1 &
 echo $! > "$RUN_DIR/driver.pid"

@@ -2,7 +2,7 @@
 # Runs inside dbus-run-session: record the private bus, seed the private dconf,
 # then become the headless shell. Everything here sees only throwaway XDG dirs.
 set -e
-. "$(dirname "$0")/env.sh"
+HEADLESS_ALLOW_NO_BUS=1 . "$(dirname "$0")/env.sh"
 echo "$DBUS_SESSION_BUS_ADDRESS" > "$RUN_DIR/bus"
 
 gsettings set org.gnome.shell disable-user-extensions false
