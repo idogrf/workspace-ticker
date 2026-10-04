@@ -1,0 +1,12 @@
+/* Dark translucent pill with fully rounded ends, close to GNOME's OSD look.
+   Own classes rather than .osd-window, whose min sizes and padding would
+   fight the manual layout. */
+.workspace-ticker-pill {
+    background-color: rgba(30, 30, 30, 0.85);
+    border-radius: 999px;
+    padding: 10px 0;
+}
+
+.workspace-ticker-label {
+    color: #ffffff;
+}
