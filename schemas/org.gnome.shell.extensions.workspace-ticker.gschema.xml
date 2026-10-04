@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+  <schema id="org.gnome.shell.extensions.workspace-ticker"
+          path="/org/gnome/shell/extensions/workspace-ticker/">
+    <key name="display-duration" type="i">
+      <default>1000</default>
+      <range min="300" max="5000"/>
+      <summary>How long the strip stays up, in milliseconds</summary>
+      <description>Time the strip stays fully visible after the slide
+      finishes, before it fades out. Each new switch restarts it.</description>
+    </key>
+
+    <key name="animation-duration" type="i">
+      <default>250</default>
+      <range min="0" max="1000"/>
+      <summary>Slide duration, in milliseconds</summary>
+      <description>How long the strip takes to slide to the new workspace
+      while its name grows into the centre. 0 jumps straight there.</description>
+    </key>
+
+    <key name="bottom-offset" type="i">
+      <default>10</default>
+      <range min="0" max="50"/>
+      <summary>Distance from the bottom edge, in percent</summary>
+      <description>Gap between the bottom of the monitor and the bottom of
+      the strip, as a percentage of the monitor's height.</description>
+    </key>
+
+    <key name="font-size" type="i">
+      <default>24</default>
+      <range min="12" max="72"/>
+      <summary>Font size of the current workspace name, in pixels</summary>
+      <description>Neighbouring names are drawn at 0.6 of this size.</description>
+    </key>
+
+    <key name="strip-width" type="i">
+      <default>40</default>
+      <range min="20" max="100"/>
+      <summary>Strip width, in percent</summary>
+      <description>Width of the strip as a percentage of the monitor's width.
+      Names beyond it fade out at the edges.</description>
+    </key>
+
+    <key name="unnamed-format" type="s">
+      <default>'{number}'</default>
+      <summary>Label for unnamed workspaces</summary>
+      <description>Shown for workspaces without a name. {number} is replaced
+      with the workspace's number, counting from 1. Left blank, the number
+      alone is shown.</description>
+    </key>
+  </schema>
+</schemalist>
