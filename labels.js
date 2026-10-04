@@ -15,16 +15,21 @@
  * @param {boolean} dynamic - Whether `org.gnome.mutter dynamic-workspaces` is on.
  * @param {string} unnamedFormat - Label for unnamed workspaces; `{number}` is
  *   replaced with the 1-based index. Blank means just the number.
+ * @param {boolean} [showNumber] - Prefix named workspaces with their 1-based
+ *   number as "N · Name"; unnamed ones keep their format output.
  * @returns {string[]} Label texts.
  */
-export function workspaceLabels(names, count, activeIndex, dynamic, unnamedFormat) {
+export function workspaceLabels(names, count, activeIndex, dynamic, unnamedFormat, showNumber = false) {
     const shown = dynamic && count > 1 && activeIndex !== count - 1 ? count - 1 : count;
     const format = unnamedFormat.trim() === '' ? '{number}' : unnamedFormat;
 
     const labels = [];
     for (let i = 0; i < shown; i++) {
         const name = (names[i] ?? '').trim();
-        labels.push(name || format.replaceAll('{number}', String(i + 1)));
+        if (!name)
+            labels.push(format.replaceAll('{number}', String(i + 1)));
+        else
+            labels.push(showNumber ? `${i + 1} \u00b7 ${name}` : name);
     }
     return labels;
 }

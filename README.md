@@ -32,11 +32,14 @@ The strip's position is a single fractional value (1.5 is half way between the
 second and third name) held in an **`St.Adjustment`**, the same mechanism
 GNOME's own workspace view uses. A switch eases that value with
 `EASE_OUT_CUBIC`, and on every change all labels are laid out again from it:
-each label's scale falls from 1 at the position to 0.6 one step away, the
+each label's scale falls from 1 at the position to `neighbour-scale` (0.6)
+one step away, its opacity from 1 to `neighbour-opacity` (1.0, no dimming), the
 scaled labels are packed with a gap of 0.6 × the font size, and the row is
 shifted so the position sits at the pill's centre. Because slide and grow come
 from the same number they stay in step, and a new switch mid-animation starts
-from wherever the strip currently is, with no snap back.
+from wherever the strip currently is, with no snap back. With `show-number` on,
+named workspaces read "2 · Name"; unnamed ones keep their format, so they never
+read "4 · 4".
 
 The pill is narrow: `strip-width-em` times the font size wide (7.5 × 24 px =
 180 px by default), room for about three names. The neighbours only peek in at
@@ -71,9 +74,11 @@ Two details that are easy to get wrong:
 
 - **The pill is shown before easing.** GNOME skips animations on unmapped
   actors, so easing a hidden pill's adjustment would snap instead of slide.
-- **Labels are measured after `ensure_style()`.** Until the font-size style is
-  resolved the width is measured at the default font, and the layout comes out
-  too tight.
+- **Labels are measured after `ensure_style()`.** Until the font style (size,
+  family, weight) is resolved the width is measured at the default font, and the
+  layout comes out too tight. Bold applies to every name, not just the current
+  one, because widths are measured once per build and a weight change mid-slide
+  would change a label's width.
 
 Labels are moved with `translation_x` and `set_scale` only, so no size is
 re-measured per frame (with custom colours on, a label whose colour is
@@ -110,6 +115,11 @@ Gear icon in Extensions Manager. All are live, no logout.
 | Gap between the dock's top and the strip (px, 0-200) | `dock-gap` | `12` |
 | Distance from the bottom edge (% of monitor height, 0-50); used when there is no dock or `above-dock` is off | `bottom-offset` | `10` |
 | Font size of the current name (px, 12-72) | `font-size` | `24` |
+| Font family of the names; empty uses the theme font | `font-family` | `''` |
+| Draw every name in bold | `bold-names` | `false` |
+| Size of the neighbouring names (fraction of the font size, 0.3-1.0) | `neighbour-scale` | `0.6` |
+| Opacity of the neighbouring names (0.2-1.0; 1.0 is no dimming) | `neighbour-opacity` | `1.0` |
+| Prefix named workspaces with their number, "2 · Name" | `show-number` | `false` |
 | Strip width (multiples of the font size, 4.0-20.0) | `strip-width-em` | `7.5` |
 | Inner padding above and below the name (px, 0-30; 6 more with dots) | `padding` | `10` |
 | Corner radius of the pill (px, 0-100; larger than half the height gives round ends) | `corner-radius` | `100` |

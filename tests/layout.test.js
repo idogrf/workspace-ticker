@@ -70,6 +70,30 @@ import {check, near, finish} from './assert.js';
     check('continuity', before.every((it, i) => Math.abs(it.center - at[i].center) < 0.1));
 }
 
+// neighbourScale 0.4, integer position: widths 40,100,40 → raw centres
+// 20,102,184 → shifted so 102 lands on 300.
+{
+    const items = computeLayout([100, 100, 100], 1, 20, 600, {neighbourScale: 0.4});
+    check('scale option: neighbours at 0.4', items[0].scale === 0.4 && items[2].scale === 0.4);
+    check('scale option: current full size', items[1].scale === 1);
+    check('scale option: current centred', near(items[1].center, 300));
+    check('scale option: left neighbour', near(items[0].center, 218));
+    check('scale option: right neighbour', near(items[2].center, 382));
+}
+
+// neighbourOpacity 0.5: current stays 255, a neighbour in the fade-free zone
+// is round(255 * 0.5) = 128, half way (k = 0.5) it is lerp(0.5, 1, 0.5) = 0.75.
+{
+    const items = computeLayout([100, 100, 100], 1, 20, 600, {neighbourOpacity: 0.5});
+    check('dim: current stays opaque', items[1].opacity === 255);
+    check('dim: neighbours dimmed', items[0].opacity === 128 && items[2].opacity === 128);
+    const half = computeLayout([100, 100, 100], 1.5, 20, 600, {neighbourOpacity: 0.5});
+    check('dim: half way is in between', half[1].opacity > 128 && half[1].opacity < 255);
+    check('dim: half way value', half[1].opacity === 191);
+    const dflt = computeLayout([100, 100, 100], 1, 20, 600, {});
+    check('dim: default is no dimming', dflt[0].opacity === 255);
+}
+
 check('empty strip', computeLayout([], 0, 20, 600).length === 0);
 
 finish();

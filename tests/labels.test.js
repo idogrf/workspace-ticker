@@ -25,4 +25,14 @@ check('dynamic: spare shown when active',
 check('dynamic: single workspace stays',
     eq(workspaceLabels([], 1, 0, true, '{number}'), ['1']));
 
+check('show number: named gets prefix',
+    eq(workspaceLabels(['Main', 'Private'], 2, 0, false, '{number}', true),
+        ['1 \u00b7 Main', '2 \u00b7 Private']));
+check('show number: unnamed unchanged',
+    eq(workspaceLabels(['Main'], 3, 0, false, '{number}', true), ['1 \u00b7 Main', '2', '3']));
+check('show number: unnamed format unchanged',
+    eq(workspaceLabels([], 2, 0, false, 'WS {number}', true), ['WS 1', 'WS 2']));
+check('show number: off by default',
+    eq(workspaceLabels(['Main'], 1, 0, false, '{number}'), ['Main']));
+
 finish();

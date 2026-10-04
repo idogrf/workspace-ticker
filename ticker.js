@@ -44,6 +44,10 @@ export class Ticker {
         // cached so _relayout reads no setting per frame.
         this._fontPx = 0;
         this._scale = 1;
+        // Neighbour options, cached with the font size so _relayout reads no
+        // setting per frame.
+        this._neighbourScale = 0.6;
+        this._neighbourOpacity = 1;
 
         // Not reactive and added straight to uiGroup rather than as chrome,
         // so it never takes input or changes struts.
@@ -187,6 +191,14 @@ export class Ticker {
     _setLabels(texts, index) {
         this._strip.destroy_all_children();
         const fontSize = this._settings.get_int('font-size');
+        this._neighbourScale = this._settings.get_double('neighbour-scale');
+        this._neighbourOpacity = this._settings.get_double('neighbour-opacity');
+        const family = this._settings.get_string('font-family');
+        let style = `font-size: ${fontSize}px;`;
+        if (family)
+            style += ` font-family: "${family.replaceAll('"', '')}";`;
+        if (this._settings.get_boolean('bold-names'))
+            style += ' font-weight: bold;';
         // The current name is full size, so it must fit the pill with a gap
         // either side; anything longer is ellipsized.
         const cap = Math.max(this._pill.width - 2 * GAP_RATIO * this._fontPx, 1);
@@ -195,7 +207,7 @@ export class Ticker {
             const label = new St.Label({
                 text,
                 style_class: 'workspace-ticker-label',
-                style: `font-size: ${fontSize}px;`,
+                style,
             });
             // Scale around the centre so a shrinking label stays centred on
             // the x the layout gives it.
@@ -270,7 +282,10 @@ export class Ticker {
     // changing their text or size, so nothing is re-measured per frame.
     _relayout() {
         const items = computeLayout(this._widths, this._position.value,
-            this._fontPx, this._pill.width);
+            this._fontPx, this._pill.width, {
+                neighbourScale: this._neighbourScale,
+                neighbourOpacity: this._neighbourOpacity,
+            });
         items.forEach(({center, scale, opacity}, i) => {
             const label = this._labels[i];
             label.translation_x = center - this._widths[i] / 2;

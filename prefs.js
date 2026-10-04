@@ -2,6 +2,7 @@ import Adw from 'gi://Adw';
 import Gdk from 'gi://Gdk';
 import Gio from 'gi://Gio';
 import Gtk from 'gi://Gtk';
+import Pango from 'gi://Pango';
 
 import {ExtensionPreferences} from 'resource:///org/gnome/Shell/Extensions/js/extensions/prefs.js';
 
@@ -87,6 +88,7 @@ export default class WorkspaceTickerPreferences extends ExtensionPreferences {
             icon_name: 'applications-graphics-symbolic',
         });
         page.add(this._sizeGroup(settings));
+        page.add(this._textGroup(settings));
         page.add(this._backgroundGroup(settings));
         page.add(this._dotsGroup(settings));
         page.add(this._coloursGroup(settings));
@@ -96,7 +98,7 @@ export default class WorkspaceTickerPreferences extends ExtensionPreferences {
     _sizeGroup(settings) {
         const group = new Adw.PreferencesGroup({title: 'Size'});
         group.add(this._spinRow(settings, 'font-size', 'Font size',
-            'Pixels, for the current name. Neighbours are drawn at 0.6 of it.',
+            'Pixels, for the current name. Neighbours are scaled from it.',
             12, 72, 1));
         const widthRow = this._spinRow(settings, 'strip-width-em', 'Strip width',
             'Multiples of the font size. 7.5 fits about three names.',
@@ -110,6 +112,101 @@ export default class WorkspaceTickerPreferences extends ExtensionPreferences {
             'Pixels. 100 gives fully round ends.',
             0, 100, 1));
         return group;
+    }
+
+    _textGroup(settings) {
+        const group = new Adw.PreferencesGroup({title: 'Text'});
+
+        const fontButton = new Gtk.FontDialogButton({
+            dialog: new Gtk.FontDialog(),
+            level: Gtk.FontLevel.FAMILY,
+            valign: Gtk.Align.CENTER,
+        });
+        // Empty means the theme font, which the button shows until a family
+        // is picked.
+        let loading = false;
+        const loadFont = () => {
+            loading = true;
+            setFont();
+            loading = false;
+        };
+        const setFont = () => {
+            const family = settings.get_string('font-family');
+            if (family === '') {
+                fontButton.font_desc = Pango.FontDescription.from_string(
+                    Gtk.Settings.get_default().gtk_font_name);
+                return;
+            }
+            const desc = new Pango.FontDescription();
+            desc.set_family(family);
+            if (fontButton.font_desc?.get_family() !== desc.get_family())
+                fontButton.font_desc = desc;
+        };
+        loadFont();
+        fontButton.connect('notify::font-desc', () => {
+            if (loading)
+                return;
+            const family = fontButton.font_desc?.get_family() ?? '';
+            if (family !== '' && family !== settings.get_string('font-family'))
+                settings.set_string('font-family', family);
+        });
+        this._handlerIds.push(settings.connect('changed::font-family', loadFont));
+        const resetButton = new Gtk.Button({
+            icon_name: 'edit-clear-symbolic',
+            tooltip_text: 'Reset',
+            valign: Gtk.Align.CENTER,
+            css_classes: ['flat'],
+        });
+        resetButton.connect('clicked', () => settings.set_string('font-family', ''));
+        const fontRow = new Adw.ActionRow({
+            title: 'Font',
+            subtitle: 'Family of the names. Reset uses the theme font.',
+            activatable_widget: fontButton,
+        });
+        fontRow.add_suffix(fontButton);
+        fontRow.add_suffix(resetButton);
+        group.add(fontRow);
+
+        const boldRow = new Adw.SwitchRow({title: 'Bold names'});
+        settings.bind('bold-names', boldRow, 'active', Gio.SettingsBindFlags.DEFAULT);
+        group.add(boldRow);
+
+        group.add(this._percentRow(settings, 'neighbour-scale', 'Neighbour size',
+            'Percent of the font size.', 30, 100));
+        group.add(this._percentRow(settings, 'neighbour-opacity', 'Neighbour opacity',
+            'Percent. Below 100 dims the names beside the current one.', 20, 100));
+
+        const numberRow = new Adw.SwitchRow({
+            title: 'Show workspace number',
+            subtitle: 'Prefixes named workspaces as "2 · Name".',
+        });
+        settings.bind('show-number', numberRow, 'active', Gio.SettingsBindFlags.DEFAULT);
+        group.add(numberRow);
+        return group;
+    }
+
+    // A 0-1 double setting shown as a percent SpinRow.
+    _percentRow(settings, key, title, subtitle, lower, upper) {
+        const row = new Adw.SpinRow({
+            title,
+            subtitle,
+            adjustment: new Gtk.Adjustment({
+                lower, upper, step_increment: 5, page_increment: 10,
+            }),
+        });
+        const load = () => {
+            const percent = Math.round(settings.get_double(key) * 100);
+            if (row.value !== percent)
+                row.value = percent;
+        };
+        load();
+        row.connect('notify::value', () => {
+            const value = row.value / 100;
+            if (Math.abs(value - settings.get_double(key)) > 0.001)
+                settings.set_double(key, value);
+        });
+        this._handlerIds.push(settings.connect(`changed::${key}`, load));
+        return row;
     }
 
     _backgroundGroup(settings) {

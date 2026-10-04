@@ -46,7 +46,8 @@ export default class WorkspaceTickerExtension extends Extension {
             manager.n_workspaces,
             manager.get_active_workspace_index(),
             this._mutterSettings.get_boolean('dynamic-workspaces'),
-            this._settings.get_string('unnamed-format'));
+            this._settings.get_string('unnamed-format'),
+            this._settings.get_boolean('show-number'));
     }
 
     // With workspaces on the primary monitor only, that is where the switch

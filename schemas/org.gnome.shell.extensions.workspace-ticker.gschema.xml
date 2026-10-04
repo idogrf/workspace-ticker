@@ -46,7 +46,43 @@
       <default>24</default>
       <range min="12" max="72"/>
       <summary>Font size of the current workspace name, in pixels</summary>
-      <description>Neighbouring names are drawn at 0.6 of this size.</description>
+      <description>Neighbouring names are drawn at neighbour-scale of this size.</description>
+    </key>
+
+    <key name="font-family" type="s">
+      <default>''</default>
+      <summary>Font family of the names</summary>
+      <description>Family name such as "Cantarell". Empty uses the theme
+      font.</description>
+    </key>
+
+    <key name="bold-names" type="b">
+      <default>false</default>
+      <summary>Bold names</summary>
+      <description>Draw every name in bold.</description>
+    </key>
+
+    <key name="neighbour-scale" type="d">
+      <default>0.6</default>
+      <range min="0.3" max="1.0"/>
+      <summary>Size of the neighbouring names</summary>
+      <description>Names one step or more from the current one are drawn at
+      this fraction of the font size.</description>
+    </key>
+
+    <key name="neighbour-opacity" type="d">
+      <default>1.0</default>
+      <range min="0.2" max="1.0"/>
+      <summary>Opacity of the neighbouring names</summary>
+      <description>Names one step or more from the current one are dimmed to
+      this opacity; 1.0 means no dimming.</description>
+    </key>
+
+    <key name="show-number" type="b">
+      <default>false</default>
+      <summary>Show the workspace number</summary>
+      <description>Prefix named workspaces with their number, as
+      "2 · Name". Unnamed workspaces already show their number.</description>
     </key>
 
     <key name="strip-width-em" type="d">
