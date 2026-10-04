@@ -24,8 +24,8 @@ if [ -n "$TICKER_WITH_DOCK" ]; then
     ln -s "$DOCK" "$RUN_DIR/data/gnome-shell/extensions/dash-to-dock-ido@idogr"
 fi
 
-# Real-session guard: record the real extension list now, compare in stop.sh.
-gsettings get org.gnome.shell enabled-extensions > "$RUN_DIR/real-enabled.before"
+# Real-session guard: record the real extension state now, compare in stop.sh.
+"$HEADLESS_DIR/real-state.sh" > "$RUN_DIR/real-state.before"
 
 (
     HEADLESS_ALLOW_NO_BUS=1 . "$HEADLESS_DIR/env.sh"

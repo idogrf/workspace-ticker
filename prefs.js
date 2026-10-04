@@ -8,6 +8,7 @@ import {ExtensionPreferences} from 'resource:///org/gnome/Shell/Extensions/js/ex
 export default class WorkspaceTickerPreferences extends ExtensionPreferences {
     fillPreferencesWindow(window) {
         const settings = this.getSettings();
+        this._handlerIds = [];
 
         const spinRow = (key, title, subtitle, lower, upper, step) => {
             const row = new Adw.SpinRow({
@@ -78,6 +79,13 @@ export default class WorkspaceTickerPreferences extends ExtensionPreferences {
         page.add(naming);
         window.add(page);
         window.add(this._colorsPage(settings));
+        // The settings object outlives the window, so drop the handlers
+        // that point at its widgets.
+        window.connect('close-request', () => {
+            this._handlerIds.forEach(id => settings.disconnect(id));
+            this._handlerIds = [];
+            return false;
+        });
     }
 
     _colorsPage(settings) {
@@ -107,7 +115,7 @@ export default class WorkspaceTickerPreferences extends ExtensionPreferences {
                 if (str !== settings.get_string(key))
                     settings.set_string(key, str);
             });
-            settings.connect(`changed::${key}`, load);
+            this._handlerIds.push(settings.connect(`changed::${key}`, load));
             const row = new Adw.ActionRow({title, activatable_widget: button});
             row.add_suffix(button);
             expander.add_row(row);
@@ -136,7 +144,7 @@ export default class WorkspaceTickerPreferences extends ExtensionPreferences {
             if (Math.abs(opacity - settings.get_double('pill-opacity')) > 0.001)
                 settings.set_double('pill-opacity', opacity);
         });
-        settings.connect('changed::pill-opacity', loadOpacity);
+        this._handlerIds.push(settings.connect('changed::pill-opacity', loadOpacity));
         expander.add_row(opacityRow);
 
         const resetRow = new Adw.ButtonRow({title: 'Reset colours'});

@@ -6,11 +6,12 @@ import St from 'gi://St';
 
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
-import {computeLayout} from './layout.js';
+import {computeLayout, GAP_RATIO} from './layout.js';
 
 const FADE_IN_MS = 100;
 const FADE_OUT_MS = 250;
-// Vertical padding of .workspace-ticker-pill.with-dots in stylesheet.css.
+// Vertical padding of .workspace-ticker-pill.with-dots in stylesheet.css, in
+// CSS px: multiply by the theme scale factor to get actor px.
 const DOTS_PADDING = 16;
 
 // Parses a CSS colour string to 0-255 channels, or the fallback on failure.
@@ -39,6 +40,11 @@ export class Ticker {
         this._custom = false;
         this._nameColor = null;
         this._neighbourColor = null;
+        this._monitor = null;
+        // Font size in actor px (settings value times the theme scale factor),
+        // cached so _relayout reads no setting per frame.
+        this._fontPx = 0;
+        this._scale = 1;
 
         // Not reactive and added straight to uiGroup rather than as chrome,
         // so it never takes input or changes struts.
@@ -61,7 +67,6 @@ export class Ticker {
             x_align: Clutter.ActorAlign.CENTER,
             y_align: Clutter.ActorAlign.END,
             y_expand: true,
-            margin_bottom: 5,
         });
         this._pill.add_child(this._dotRow);
         Main.layoutManager.uiGroup.add_child(this._pill);
@@ -82,10 +87,13 @@ export class Ticker {
     show(monitor, texts, from, to) {
         if (!this._pill.visible)
             this._build(monitor, texts, from);
-        else if (texts.join('\n') !== this._texts.join('\n'))
+        else if (monitor !== this._monitor || texts.join('\n') !== this._texts.join('\n'))
             this._build(monitor, texts, Math.min(this._position.value, texts.length - 1));
 
-        Main.layoutManager.uiGroup.set_child_above_sibling(this._pill, null);
+        // Above ordinary windows and chrome but below modal dialogs, DnD
+        // feedback and screen transitions, which sit above modalDialogGroup.
+        Main.layoutManager.uiGroup.set_child_below_sibling(this._pill,
+            Main.layoutManager.modalDialogGroup);
         // Show before easing: St.Adjustment.ease runs with duration 0 while
         // its actor is unmapped, so a hidden pill would snap instead of slide.
         this._pill.show();
@@ -129,8 +137,12 @@ export class Ticker {
     // Width first, because the layout centres on it; then labels; then the
     // vertical position, which depends on the label height.
     _build(monitor, texts, index) {
-        const width = Math.round(this._settings.get_double('strip-width-em') *
-            this._settings.get_int('font-size'));
+        this._monitor = monitor;
+        // St scales CSS px (padding, font-size, dot height) by this factor;
+        // the px quantities set from code must match.
+        this._scale = St.ThemeContext.get_for_stage(global.stage).scale_factor;
+        this._fontPx = this._settings.get_int('font-size') * this._scale;
+        const width = Math.round(this._settings.get_double('strip-width-em') * this._fontPx);
         this._pill.width = width;
         this._setLabels(texts, index);
 
@@ -176,6 +188,9 @@ export class Ticker {
     _setLabels(texts, index) {
         this._strip.destroy_all_children();
         const fontSize = this._settings.get_int('font-size');
+        // The current name is full size, so it must fit the pill with a gap
+        // either side; anything longer is ellipsized.
+        const cap = Math.max(this._pill.width - 2 * GAP_RATIO * this._fontPx, 1);
         this._texts = texts;
         this._labels = texts.map(text => {
             const label = new St.Label({
@@ -186,10 +201,13 @@ export class Ticker {
             // Scale around the centre so a shrinking label stays centred on
             // the x the layout gives it.
             label.set_pivot_point(0.5, 0.5);
+            label.clutter_text.ellipsize = Pango.EllipsizeMode.END;
             this._strip.add_child(label);
             // Resolve the font-size style now, or the width below is measured
             // at the default font and the layout comes out too tight.
             label.ensure_style();
+            if (label.get_preferred_width(-1)[1] > cap)
+                label.set_width(cap);
             return label;
         });
         this._widths = this._labels.map(label => label.get_preferred_width(-1)[1]);
@@ -199,7 +217,8 @@ export class Ticker {
             this._pill.add_style_class_name('with-dots');
         else
             this._pill.remove_style_class_name('with-dots');
-        this._dotRow.translation_y = showDots ? DOTS_PADDING : 0;
+        this._dotRow.margin_bottom = 5 * this._scale;
+        this._dotRow.translation_y = showDots ? DOTS_PADDING * this._scale : 0;
         this._dotRow.destroy_all_children();
         this._dots = showDots ? texts.map(() => {
             const dot = new St.Widget({style_class: 'workspace-ticker-dot'});
@@ -250,7 +269,7 @@ export class Ticker {
     // changing their text or size, so nothing is re-measured per frame.
     _relayout() {
         const items = computeLayout(this._widths, this._position.value,
-            this._settings.get_int('font-size'), this._pill.width);
+            this._fontPx, this._pill.width);
         items.forEach(({center, scale, opacity}, i) => {
             const label = this._labels[i];
             label.translation_x = center - this._widths[i] / 2;
@@ -285,7 +304,7 @@ export class Ticker {
         const p = this._position.value;
         this._dots.forEach((dot, i) => {
             const k = Math.max(0, 1 - Math.abs(i - p));
-            dot.width = 6 + 10 * k;
+            dot.width = (6 + 10 * k) * this._scale;
             dot.opacity = Math.round(255 * (0.4 + 0.6 * k));
         });
     }

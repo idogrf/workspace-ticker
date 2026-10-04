@@ -71,8 +71,9 @@ Two details that are easy to get wrong:
   resolved the width is measured at the default font, and the layout comes out
   too tight.
 
-Labels are moved with `translation_x` and `set_scale` only, so nothing is
-re-measured per frame. The pill is not reactive and is added straight to
+Labels are moved with `translation_x` and `set_scale` only, so no size is
+re-measured per frame (with custom colours on, a label whose colour is
+changing gets a Pango re-layout, but its size does not change). The pill is not reactive and is added straight to
 `uiGroup`, so it never takes input or changes struts.
 
 ### Where and when it shows
@@ -86,7 +87,7 @@ window, which it should not cover.
 
 By default the strip sits `dock-gap` pixels above the dock. It looks for Dash
 to Dock's (or Ubuntu Dock's) container on the strip's monitor, and counts it as
-a bottom dock when it is wider than tall and ends at the monitor's bottom edge.
+a bottom dock when it is wider than the dash's natural height and ends at the monitor's bottom edge.
 Auto-hide does not move the strip: the container collapses to nothing while
 the dock is hidden, so the height used is the dock's own (dash) height, which
 does not change. With no bottom dock (or
@@ -120,10 +121,15 @@ A blank `unnamed-format` falls back to the bare number, never a blank label.
 ## Install (development)
 
 ```bash
-ln -s ~/Private/Repos/gnome_extensions/workspace-ticker \
-    ~/.local/share/gnome-shell/extensions/workspace-ticker@idogr
+cd ~/Private/Repos/gnome_extensions/workspace-ticker
+ln -s "$PWD" ~/.local/share/gnome-shell/extensions/workspace-ticker@idogr
 glib-compile-schemas schemas/
 ```
+
+Run the last command from the repo root again after every pull that changes
+`schemas/`: a stale compiled schema makes a new key throw on every switch. The
+install is a symlink to the working tree, so uncommitted edits go live at your
+next login.
 
 Log out and back in (Wayland), then:
 
@@ -163,8 +169,8 @@ with `&&`:
 - `GSETTINGS_SCHEMA_DIR=$PWD/schemas` is needed for the extension's own schema,
   which the private environment does not otherwise see.
 - `stop.sh` stops only what `start.sh` started, then checks that the real
-  `enabled-extensions` is unchanged and does not mention the extension, and that
-  the real extensions directory has no `workspace-ticker@idogr`. It reports
+  `enabled-extensions` and the real `workspace-ticker@idogr` entry (present or
+  not, and its symlink target) are the same as before the run. It reports
   `REAL SESSION TOUCHED` otherwise.
 
 ## Known issues
