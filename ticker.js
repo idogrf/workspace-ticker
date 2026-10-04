@@ -236,6 +236,12 @@ export class Ticker {
                 const mix = c => Math.round(n[c] + (m[c] - n[c]) * k);
                 // clutter_text.color is not enough: St gives the text a Pango
                 // foreground attribute from the theme, which wins over it.
+                // Skip unchanged colours: new attributes dirty the layout.
+                // Labels are rebuilt in _setLabels, so the cache resets there.
+                const key = `${mix(0)},${mix(1)},${mix(2)},${mix(3)}`;
+                if (label._colorKey === key)
+                    return;
+                label._colorKey = key;
                 const attrs = new Pango.AttrList();
                 attrs.insert(Pango.attr_foreground_new(mix(0) * 257, mix(1) * 257, mix(2) * 257));
                 attrs.insert(Pango.attr_foreground_alpha_new(mix(3) * 257));

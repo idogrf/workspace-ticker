@@ -57,7 +57,7 @@ Off by default: the look then comes entirely from `stylesheet.css`. The
 Colours page of the preferences has a "Custom colours" expander whose switch
 turns `use-custom-colors` on and reveals the pickers (background, current name,
 neighbour names, dots) and the background opacity. When on, the pill and dots
-get an inline background colour. Label colours are not styled: the neighbour
+get an inline background colour. Label colours are not styled: they are carried by Pango attributes on the label text, and the neighbour
 colour blends into the current-name colour as a name slides into the centre,
 with the same factor as the scale, and is set per frame on the label's text
 actor (no restyling). Neighbour and dot colours may carry alpha; the edge fade
