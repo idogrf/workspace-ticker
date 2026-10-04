@@ -7,6 +7,14 @@ RUN_DIR="$HEADLESS_DIR/runs/current"
 # start.sh and inner.sh run before the bus is recorded, so they opt out.
 if [ -z "$HEADLESS_ALLOW_NO_BUS" ] && { [ ! -f "$RUN_DIR/bus" ] || [ ! -e "$RUN_DIR/shell.pid" ]; }; then
     echo "env.sh: no active headless run (start tools/headless/start.sh first)" >&2
+    # Fail closed: callers chain with `;`, so make any following gsettings or
+    # gnome-extensions command error out instead of reaching the real session.
+    # A bogus bus address (not unset) stops the fallback to $XDG_RUNTIME_DIR/bus,
+    # and the non-existent runtime dir hides the real dconf.
+    export DBUS_SESSION_BUS_ADDRESS="unix:path=$RUN_DIR/no-active-run"
+    export XDG_RUNTIME_DIR="$RUN_DIR/no-active-run"
+    export XDG_CONFIG_HOME="$RUN_DIR/no-active-run" XDG_DATA_HOME="$RUN_DIR/no-active-run"
+    unset WAYLAND_DISPLAY DISPLAY
     return 1
 fi
 export RUN_DIR
