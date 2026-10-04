@@ -1,16 +1,11 @@
 /* Dark translucent pill with fully rounded ends, close to GNOME's OSD look.
    Own classes rather than .osd-window, whose min sizes and padding would
-   fight the manual layout. */
+   fight the manual layout. ticker.js sets background opacity, radius and
+   padding inline from the settings; these are only fallbacks. */
 .workspace-ticker-pill {
-    background-color: rgba(30, 30, 30, 0.85);
+    background-color: rgba(30, 30, 30, 0.4);
     border-radius: 999px;
     padding: 10px 0;
-}
-
-/* Symmetric padding keeps the name vertically centred; the dots are placed
-   inside the larger bottom padding instead of adding a row under the name. */
-.workspace-ticker-pill.with-dots {
-    padding: 16px 0;
 }
 
 .workspace-ticker-dot {

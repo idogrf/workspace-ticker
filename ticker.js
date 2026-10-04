@@ -10,9 +10,8 @@ import {computeLayout, GAP_RATIO} from './layout.js';
 
 const FADE_IN_MS = 100;
 const FADE_OUT_MS = 250;
-// Vertical padding of .workspace-ticker-pill.with-dots in stylesheet.css, in
-// CSS px: multiply by the theme scale factor to get actor px.
-const DOTS_PADDING = 16;
+// Extra vertical padding, in CSS px, that makes room for the dot row.
+const DOTS_EXTRA_PADDING = 6;
 
 // Parses a CSS colour string to 0-255 channels, or the fallback on failure.
 function parseColor(str, fallback) {
@@ -61,7 +60,7 @@ export class Ticker {
         // Pinned to the bottom, inside the pill's bottom padding, so it never
         // moves the name off the vertical centre. The pill's padding shrinks
         // the area a child is laid out in, so _setLabels pushes the row down
-        // by DOTS_PADDING to sit 5px above the pill's real bottom edge.
+        // by the effective padding to sit 5px above the pill's real bottom edge.
         this._dotRow = new St.BoxLayout({
             style: 'spacing: 6px;',
             x_align: Clutter.ActorAlign.CENTER,
@@ -213,12 +212,10 @@ export class Ticker {
         this._widths = this._labels.map(label => label.get_preferred_width(-1)[1]);
 
         const showDots = this._settings.get_boolean('show-dots');
-        if (showDots)
-            this._pill.add_style_class_name('with-dots');
-        else
-            this._pill.remove_style_class_name('with-dots');
+        const padding = this._settings.get_int('padding') +
+            (showDots ? DOTS_EXTRA_PADDING : 0);
         this._dotRow.margin_bottom = 5 * this._scale;
-        this._dotRow.translation_y = showDots ? DOTS_PADDING * this._scale : 0;
+        this._dotRow.translation_y = showDots ? padding * this._scale : 0;
         this._dotRow.destroy_all_children();
         this._dots = showDots ? texts.map(() => {
             const dot = new St.Widget({style_class: 'workspace-ticker-dot'});
@@ -226,7 +223,7 @@ export class Ticker {
             return dot;
         }) : [];
 
-        this._applyColors();
+        this._applyColors(padding);
 
         this._position.remove_transition('value');
         this._position.upper = Math.max(texts.length - 1, 0);
@@ -239,17 +236,21 @@ export class Ticker {
     // styled: they are parsed and lerped per frame in _relayout, because
     // set_style would re-resolve the theme node on every frame. Called only
     // from _setLabels, so a style change never resets the text colour
-    // mid-animation.
-    _applyColors() {
+    // mid-animation. Opacity, radius and padding always apply; colours only
+    // with custom colours on.
+    _applyColors(padding) {
         this._custom = this._settings.get_boolean('use-custom-colors');
+        const [r, g, b] = this._custom
+            ? parseColor(this._settings.get_string('pill-color'), [30, 30, 30])
+            : [30, 30, 30];
+        const opacity = this._settings.get_double('pill-opacity');
+        const radius = this._settings.get_int('corner-radius');
+        this._pill.set_style(`background-color: rgba(${r},${g},${b},${opacity}); ` +
+            `border-radius: ${radius}px; padding: ${padding}px 0;`);
         if (!this._custom) {
-            this._pill.set_style(null);
             this._dots.forEach(dot => dot.set_style(null));
             return;
         }
-        const [r, g, b] = parseColor(this._settings.get_string('pill-color'), [30, 30, 30]);
-        const opacity = this._settings.get_double('pill-opacity');
-        this._pill.set_style(`background-color: rgba(${r},${g},${b},${opacity});`);
         const [dr, dg, db, da] = parseColor(this._settings.get_string('dot-color'),
             [255, 255, 255, 255]);
         this._dots.forEach(dot =>

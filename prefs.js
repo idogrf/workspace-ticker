@@ -10,56 +10,57 @@ export default class WorkspaceTickerPreferences extends ExtensionPreferences {
         const settings = this.getSettings();
         this._handlerIds = [];
 
-        const spinRow = (key, title, subtitle, lower, upper, step) => {
-            const row = new Adw.SpinRow({
-                title,
-                subtitle,
-                adjustment: new Gtk.Adjustment({
-                    lower,
-                    upper,
-                    step_increment: step,
-                    page_increment: step * 10,
-                }),
-            });
-            settings.bind(key, row, 'value', Gio.SettingsBindFlags.DEFAULT);
-            return row;
-        };
+        window.add(this._generalPage(settings));
+        window.add(this._appearancePage(settings));
+        // The settings object outlives the window, so drop the handlers
+        // that point at its widgets.
+        window.connect('close-request', () => {
+            this._handlerIds.forEach(id => settings.disconnect(id));
+            this._handlerIds = [];
+            return false;
+        });
+    }
 
+    _spinRow(settings, key, title, subtitle, lower, upper, step) {
+        const row = new Adw.SpinRow({
+            title,
+            subtitle,
+            adjustment: new Gtk.Adjustment({
+                lower,
+                upper,
+                step_increment: step,
+                page_increment: step * 10,
+            }),
+        });
+        settings.bind(key, row, 'value', Gio.SettingsBindFlags.DEFAULT);
+        return row;
+    }
+
+    _generalPage(settings) {
         const timing = new Adw.PreferencesGroup({
             title: 'Timing',
             description: 'Changes apply right away — no need to log out.',
         });
-        timing.add(spinRow('display-duration', 'Display duration',
+        timing.add(this._spinRow(settings, 'display-duration', 'Display duration',
             'Milliseconds the strip stays up after sliding, before it fades.',
             300, 5000, 50));
-        timing.add(spinRow('animation-duration', 'Slide duration',
+        timing.add(this._spinRow(settings, 'animation-duration', 'Slide duration',
             'Milliseconds the slide to the new workspace takes. 0 jumps.',
             0, 1000, 25));
 
-        const appearance = new Adw.PreferencesGroup({title: 'Appearance'});
+        const placement = new Adw.PreferencesGroup({title: 'Placement'});
         const aboveDockRow = new Adw.SwitchRow({title: 'Sit above the dock'});
         settings.bind('above-dock', aboveDockRow, 'active', Gio.SettingsBindFlags.DEFAULT);
-        appearance.add(aboveDockRow);
-        const gapRow = spinRow('dock-gap', 'Gap above dock',
+        placement.add(aboveDockRow);
+        const gapRow = this._spinRow(settings, 'dock-gap', 'Gap above dock',
             'Pixels between the top of the dock and the strip.',
             0, 200, 1);
         settings.bind('above-dock', gapRow, 'sensitive', Gio.SettingsBindFlags.GET);
-        appearance.add(gapRow);
-        appearance.add(spinRow('bottom-offset', 'Distance from bottom',
+        placement.add(gapRow);
+        placement.add(this._spinRow(settings, 'bottom-offset', 'Distance from bottom',
             'Percent of the screen height between the bottom edge and the strip. ' +
             'Applies when there is no dock, or "Sit above the dock" is off.',
             0, 50, 1));
-        appearance.add(spinRow('font-size', 'Font size',
-            'Pixels, for the current name. Neighbours are drawn at 0.6 of it.',
-            12, 72, 1));
-        const widthRow = spinRow('strip-width-em', 'Strip width',
-            'Multiples of the font size. 7.5 fits about three names.',
-            4, 20, 0.5);
-        widthRow.digits = 1;
-        appearance.add(widthRow);
-        const dotsRow = new Adw.SwitchRow({title: 'Show position dots'});
-        settings.bind('show-dots', dotsRow, 'active', Gio.SettingsBindFlags.DEFAULT);
-        appearance.add(dotsRow);
 
         const naming = new Adw.PreferencesGroup({
             title: 'Unnamed workspaces',
@@ -75,20 +76,77 @@ export default class WorkspaceTickerPreferences extends ExtensionPreferences {
             icon_name: 'preferences-system-symbolic',
         });
         page.add(timing);
-        page.add(appearance);
+        page.add(placement);
         page.add(naming);
-        window.add(page);
-        window.add(this._colorsPage(settings));
-        // The settings object outlives the window, so drop the handlers
-        // that point at its widgets.
-        window.connect('close-request', () => {
-            this._handlerIds.forEach(id => settings.disconnect(id));
-            this._handlerIds = [];
-            return false;
-        });
+        return page;
     }
 
-    _colorsPage(settings) {
+    _appearancePage(settings) {
+        const page = new Adw.PreferencesPage({
+            title: 'Appearance',
+            icon_name: 'applications-graphics-symbolic',
+        });
+        page.add(this._sizeGroup(settings));
+        page.add(this._backgroundGroup(settings));
+        page.add(this._dotsGroup(settings));
+        page.add(this._coloursGroup(settings));
+        return page;
+    }
+
+    _sizeGroup(settings) {
+        const group = new Adw.PreferencesGroup({title: 'Size'});
+        group.add(this._spinRow(settings, 'font-size', 'Font size',
+            'Pixels, for the current name. Neighbours are drawn at 0.6 of it.',
+            12, 72, 1));
+        const widthRow = this._spinRow(settings, 'strip-width-em', 'Strip width',
+            'Multiples of the font size. 7.5 fits about three names.',
+            4, 20, 0.5);
+        widthRow.digits = 1;
+        group.add(widthRow);
+        group.add(this._spinRow(settings, 'padding', 'Inner padding',
+            'Pixels above and below the name.',
+            0, 30, 1));
+        group.add(this._spinRow(settings, 'corner-radius', 'Corner radius',
+            'Pixels. 100 gives fully round ends.',
+            0, 100, 1));
+        return group;
+    }
+
+    _backgroundGroup(settings) {
+        const group = new Adw.PreferencesGroup({title: 'Background'});
+        // Stored as 0-1, shown as percent.
+        const opacityRow = new Adw.SpinRow({
+            title: 'Opacity',
+            subtitle: 'Percent.',
+            adjustment: new Gtk.Adjustment({
+                lower: 0, upper: 100, step_increment: 5, page_increment: 10,
+            }),
+        });
+        const loadOpacity = () => {
+            const percent = Math.round(settings.get_double('pill-opacity') * 100);
+            if (opacityRow.value !== percent)
+                opacityRow.value = percent;
+        };
+        loadOpacity();
+        opacityRow.connect('notify::value', () => {
+            const opacity = opacityRow.value / 100;
+            if (Math.abs(opacity - settings.get_double('pill-opacity')) > 0.001)
+                settings.set_double('pill-opacity', opacity);
+        });
+        this._handlerIds.push(settings.connect('changed::pill-opacity', loadOpacity));
+        group.add(opacityRow);
+        return group;
+    }
+
+    _dotsGroup(settings) {
+        const group = new Adw.PreferencesGroup({title: 'Dots'});
+        const dotsRow = new Adw.SwitchRow({title: 'Show position dots'});
+        settings.bind('show-dots', dotsRow, 'active', Gio.SettingsBindFlags.DEFAULT);
+        group.add(dotsRow);
+        return group;
+    }
+
+    _coloursGroup(settings) {
         // with_alpha is a property of the dialog, so one dialog per kind.
         const opaqueDialog = new Gtk.ColorDialog({with_alpha: false});
         const alphaDialog = new Gtk.ColorDialog({with_alpha: true});
@@ -98,6 +156,14 @@ export default class WorkspaceTickerPreferences extends ExtensionPreferences {
         });
         settings.bind('use-custom-colors', expander, 'enable-expansion',
             Gio.SettingsBindFlags.DEFAULT);
+        // Turning the switch on opens the section; the binding also fires
+        // this at window open when the setting is already on.
+        const expandWhenEnabled = () => {
+            if (expander.enable_expansion)
+                expander.expanded = true;
+        };
+        expander.connect('notify::enable-expansion', expandWhenEnabled);
+        expandWhenEnabled();
 
         const colorRow = (key, title, withAlpha) => {
             const button = new Gtk.ColorDialogButton({
@@ -125,44 +191,18 @@ export default class WorkspaceTickerPreferences extends ExtensionPreferences {
         colorRow('neighbour-color', 'Neighbour names', true);
         colorRow('dot-color', 'Dots', true);
 
-        // Stored as 0-1, shown as percent.
-        const opacityRow = new Adw.SpinRow({
-            title: 'Background opacity',
-            subtitle: 'Percent.',
-            adjustment: new Gtk.Adjustment({
-                lower: 0, upper: 100, step_increment: 5, page_increment: 10,
-            }),
-        });
-        const loadOpacity = () => {
-            const percent = Math.round(settings.get_double('pill-opacity') * 100);
-            if (opacityRow.value !== percent)
-                opacityRow.value = percent;
-        };
-        loadOpacity();
-        opacityRow.connect('notify::value', () => {
-            const opacity = opacityRow.value / 100;
-            if (Math.abs(opacity - settings.get_double('pill-opacity')) > 0.001)
-                settings.set_double('pill-opacity', opacity);
-        });
-        this._handlerIds.push(settings.connect('changed::pill-opacity', loadOpacity));
-        expander.add_row(opacityRow);
-
         const resetRow = new Adw.ButtonRow({title: 'Reset colours'});
         resetRow.connect('activated', () => {
-            ['pill-color', 'pill-opacity', 'name-color', 'neighbour-color', 'dot-color']
+            ['pill-color', 'name-color', 'neighbour-color', 'dot-color']
                 .forEach(key => settings.reset(key));
         });
         expander.add_row(resetRow);
 
         const group = new Adw.PreferencesGroup({
-            description: 'Off uses the theme\'s look. Changes apply right away.',
+            title: 'Colours',
+            description: 'Off uses the default colours.',
         });
         group.add(expander);
-        const page = new Adw.PreferencesPage({
-            title: 'Colours',
-            icon_name: 'applications-graphics-symbolic',
-        });
-        page.add(group);
-        return page;
+        return group;
     }
 }

@@ -48,16 +48,20 @@ dynamic spare gets none) shows where you are out of how many. Each dot's width
 and opacity come from the same fractional position as the names, in the same
 `_relayout()` call, so the wide dot moves in step with the slide. The name is
 vertically centred whether the dots are on or off: the pill has equal padding
-above and below (16 px with dots, 10 px without) and the dots sit inside the
+above and below (`padding` px, plus 6 with dots, set inline) and the dots sit inside the
 bottom padding rather than adding a row under the name.
 
-### Colours
+### Appearance
 
-Off by default: the look then comes entirely from `stylesheet.css`. The
-Colours page of the preferences has a "Custom colours" expander whose switch
-turns `use-custom-colors` on and reveals the pickers (background, current name,
-neighbour names, dots) and the background opacity. When on, the pill and dots
-get an inline background colour. Label colours are not styled: they are carried by Pango attributes on the label text, and the neighbour
+Background opacity, corner radius and inner padding always apply: `ticker.js`
+sets them inline on the pill (`background-color`, `border-radius`, `padding`)
+every time the labels are rebuilt, and `stylesheet.css` keeps only fallbacks.
+The radius is clamped by St to half the pill's height, so the default of 100
+gives fully round ends. Colours are separate: they are off by default, and
+the Appearance page's "Custom colours" expander has a switch that turns
+`use-custom-colors` on, opens the section and reveals the pickers (background,
+current name, neighbour names, dots). With custom colours off, the pill is
+rgb(30,30,30). When on, the pill and dots get an inline background colour. Label colours are not styled: they are carried by Pango attributes on the label text, and the neighbour
 colour blends into the current-name colour as a name slides into the centre,
 with the same factor as the scale, and is set per frame on the label's text
 actor (no restyling). Neighbour and dot colours may carry alpha; the edge fade
@@ -107,10 +111,12 @@ Gear icon in Extensions Manager. All are live, no logout.
 | Distance from the bottom edge (% of monitor height, 0-50); used when there is no dock or `above-dock` is off | `bottom-offset` | `10` |
 | Font size of the current name (px, 12-72) | `font-size` | `24` |
 | Strip width (multiples of the font size, 4.0-20.0) | `strip-width-em` | `7.5` |
+| Inner padding above and below the name (px, 0-30; 6 more with dots) | `padding` | `10` |
+| Corner radius of the pill (px, 0-100; larger than half the height gives round ends) | `corner-radius` | `100` |
 | Show the position dots under the name | `show-dots` | `true` |
-| Use the colours below instead of the theme's look | `use-custom-colors` | `false` |
+| Use the colours below instead of the default colours | `use-custom-colors` | `false` |
 | Pill background colour (RGB; alpha ignored) | `pill-color` | `rgb(30,30,30)` |
-| Pill background opacity (0.0-1.0) | `pill-opacity` | `0.85` |
+| Pill background opacity (0.0-1.0), always applies | `pill-opacity` | `0.4` |
 | Colour of the current name | `name-color` | `rgb(255,255,255)` |
 | Colour of the neighbouring names (may carry alpha) | `neighbour-color` | `rgb(255,255,255)` |
 | Colour of the position dots (may carry alpha) | `dot-color` | `rgb(255,255,255)` |

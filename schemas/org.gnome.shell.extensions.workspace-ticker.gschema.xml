@@ -75,7 +75,7 @@
     <key name="use-custom-colors" type="b">
       <default>false</default>
       <summary>Use custom colours</summary>
-      <description>Off, the strip uses the look from stylesheet.css. On, the
+      <description>Off, the strip uses the default colours. On, the
       colour keys below are applied.</description>
     </key>
 
@@ -87,10 +87,27 @@
     </key>
 
     <key name="pill-opacity" type="d">
-      <default>0.85</default>
+      <default>0.4</default>
       <range min="0.0" max="1.0"/>
       <summary>Opacity of the pill background</summary>
-      <description>0.0 is fully transparent, 1.0 fully opaque.</description>
+      <description>0.0 is fully transparent, 1.0 fully opaque. Always
+      applies, whether or not custom colours are on.</description>
+    </key>
+
+    <key name="corner-radius" type="i">
+      <default>100</default>
+      <range min="0" max="100"/>
+      <summary>Corner radius of the pill, in pixels</summary>
+      <description>Radii larger than half the pill's height are clamped, so
+      100 gives fully round ends.</description>
+    </key>
+
+    <key name="padding" type="i">
+      <default>10</default>
+      <range min="0" max="30"/>
+      <summary>Inner padding, in pixels</summary>
+      <description>Vertical space above and below the name. With the
+      position dots on, 6 more pixels are added to make room for them.</description>
     </key>
 
     <key name="name-color" type="s">
