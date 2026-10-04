@@ -30,7 +30,7 @@ class CornerMaskEffect extends Clutter.ShaderEffect {
                 vec2 size = vec2(width, height);
                 vec2 uv = cogl_tex_coord_in[0].xy;
                 vec2 d = max(vec2(radius) - min(uv * size, size - uv * size), vec2(0.0));
-                float a = clamp(radius - length(d), 0.0, 1.0);
+                float a = clamp(radius + 0.5 - length(d), 0.0, 1.0);
                 cogl_color_out = texture2D(tex, uv) * a;
             }
         `);
@@ -243,7 +243,7 @@ export class Ticker {
             this._blurActor = new Clutter.Actor({clip_to_allocation: true});
             this._maskEffect = new CornerMaskEffect();
             this._blurActor.add_effect(this._maskEffect);
-            this._blurInner = new Clutter.Actor();
+            this._blurInner = new Clutter.Actor({clip_to_allocation: true});
             this._blurEffect = new Shell.BlurEffect({
                 mode: Shell.BlurMode.ACTOR,
                 brightness: 1.0,
@@ -274,8 +274,8 @@ export class Ticker {
         this._blurEffect.radius = blurRadius;
         // Same clamp St applies to the pill's border-radius. Nudged off whole
         // numbers so GJS marshals doubles for the float uniforms.
-        const radius = Math.min(this._settings.get_int('corner-radius') * this._scale,
-            width / 2, height / 2);
+        const radius = Math.max(Math.min(this._settings.get_int('corner-radius') * this._scale,
+            width / 2, height / 2), 0.5);
         this._maskEffect.set_uniform_value('width', width - 1e-6);
         this._maskEffect.set_uniform_value('height', height - 1e-6);
         this._maskEffect.set_uniform_value('radius', radius - 1e-6);
@@ -300,6 +300,9 @@ export class Ticker {
                     source, coordinate, offset: this._blurOffset[i],
                 }));
             constraints.forEach(c => clone.add_constraint(c));
+            clone.add_constraint(new Clutter.BindConstraint({
+                source, coordinate: Clutter.BindCoordinate.SIZE,
+            }));
             this._blurInner.add_child(clone);
             const entry = {source, clone, constraints, id: 0};
             entry.id = source.connect('destroy', () => {
@@ -368,7 +371,7 @@ export class Ticker {
         const family = this._settings.get_string('font-family');
         let style = `font-size: ${fontSize}px;`;
         if (family)
-            style += ` font-family: "${family.replaceAll('"', '')}";`;
+            style += ` font-family: "${family.replace(/["\\\n\r;]/g, '')}";`;
         if (this._settings.get_boolean('bold-names'))
             style += ' font-weight: bold;';
         // The current name is full size, so it must fit the pill with a gap

@@ -111,8 +111,9 @@ window, which it should not cover.
 While the preferences window is open the pill stays up on the current
 workspace and monitor, and every change you make updates it live. It fades out
 when the window closes. This is driven by an internal `preview` key that the
-window sets; the extension resets it when enabled, so a crashed preferences
-window cannot leave the pill stuck.
+window sets; the extension resets it the next time it is enabled (login or unlock). A
+preferences crash can leave the pill pinned until preferences is opened and
+closed again or the extension is re-enabled.
 
 ## Placement
 

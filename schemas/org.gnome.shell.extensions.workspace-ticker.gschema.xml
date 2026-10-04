@@ -143,7 +143,8 @@
       <range min="0" max="30"/>
       <summary>Inner padding, in pixels</summary>
       <description>Vertical space above and below the name. With the
-      position dots on, 6 more pixels are added to make room for them.</description>
+      position dots on, dot-size more pixels are added to
+      make room for them.</description>
     </key>
 
     <key name="name-color" type="s">

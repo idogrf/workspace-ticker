@@ -214,27 +214,7 @@ export default class WorkspaceTickerPreferences extends ExtensionPreferences {
 
     _backgroundGroup(settings) {
         const group = new Adw.PreferencesGroup({title: 'Background'});
-        // Stored as 0-1, shown as percent.
-        const opacityRow = new Adw.SpinRow({
-            title: 'Opacity',
-            subtitle: 'Percent.',
-            adjustment: new Gtk.Adjustment({
-                lower: 0, upper: 100, step_increment: 5, page_increment: 10,
-            }),
-        });
-        const loadOpacity = () => {
-            const percent = Math.round(settings.get_double('pill-opacity') * 100);
-            if (opacityRow.value !== percent)
-                opacityRow.value = percent;
-        };
-        loadOpacity();
-        opacityRow.connect('notify::value', () => {
-            const opacity = opacityRow.value / 100;
-            if (Math.abs(opacity - settings.get_double('pill-opacity')) > 0.001)
-                settings.set_double('pill-opacity', opacity);
-        });
-        this._handlerIds.push(settings.connect('changed::pill-opacity', loadOpacity));
-        group.add(opacityRow);
+        group.add(this._percentRow(settings, 'pill-opacity', 'Opacity', 'Percent.', 0, 100));
 
         const borderRow = this._spinRow(settings, 'border-width', 'Border width',
             'Pixels. 0 draws no border.', 0, 6, 1);
