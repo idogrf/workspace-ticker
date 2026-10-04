@@ -184,6 +184,19 @@
       <description>Draws a soft shadow around the pill.</description>
     </key>
 
+    <key name="blur" type="b">
+      <default>false</default>
+      <summary>Blur the background behind the pill</summary>
+      <description>Blurs what is behind the pill, with rounded corners. Only visible through a translucent background, so it works best with a low opacity.</description>
+    </key>
+
+    <key name="blur-radius" type="i">
+      <default>30</default>
+      <range min="1" max="100"/>
+      <summary>Blur strength</summary>
+      <description>Blur radius, in pixels.</description>
+    </key>
+
     <key name="dot-size" type="i">
       <default>6</default>
       <range min="4" max="12"/>

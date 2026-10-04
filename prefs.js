@@ -267,6 +267,17 @@ export default class WorkspaceTickerPreferences extends ExtensionPreferences {
         const shadowRow = new Adw.SwitchRow({title: 'Drop shadow'});
         settings.bind('shadow', shadowRow, 'active', Gio.SettingsBindFlags.DEFAULT);
         group.add(shadowRow);
+
+        const blurRow = new Adw.SwitchRow({
+            title: 'Blur background',
+            subtitle: 'Works best with a low opacity.',
+        });
+        settings.bind('blur', blurRow, 'active', Gio.SettingsBindFlags.DEFAULT);
+        group.add(blurRow);
+        const blurStrengthRow = this._spinRow(settings, 'blur-radius', 'Blur strength',
+            'Pixels.', 1, 100, 1);
+        settings.bind('blur', blurStrengthRow, 'sensitive', Gio.SettingsBindFlags.GET);
+        group.add(blurStrengthRow);
         return group;
     }
 

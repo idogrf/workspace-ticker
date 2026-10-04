@@ -1,7 +1,9 @@
 import Clutter from 'gi://Clutter';
 import Cogl from 'gi://Cogl';
 import GLib from 'gi://GLib';
+import GObject from 'gi://GObject';
 import Pango from 'gi://Pango';
+import Shell from 'gi://Shell';
 import St from 'gi://St';
 
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
@@ -10,6 +12,30 @@ import {computeLayout, GAP_RATIO} from './layout.js';
 
 const FADE_IN_MS = 100;
 const FADE_OUT_MS = 250;
+
+// Shell.BlurEffect blurs its actor's whole rectangle and has no corner support,
+// so a shader after it zeroes the alpha outside the corner arcs (half-pixel
+// feather). Clutter.ShaderEffect.set_shader_source exists in GNOME 48-50.
+const CornerMaskEffect = GObject.registerClass(
+class CornerMaskEffect extends Clutter.ShaderEffect {
+    constructor() {
+        super();
+        this.set_shader_source(`
+            uniform sampler2D tex;
+            uniform float width;
+            uniform float height;
+            uniform float radius;
+
+            void main() {
+                vec2 size = vec2(width, height);
+                vec2 uv = cogl_tex_coord_in[0].xy;
+                vec2 d = max(vec2(radius) - min(uv * size, size - uv * size), vec2(0.0));
+                float a = clamp(radius - length(d) + 0.5, 0.0, 1.0);
+                cogl_color_out = texture2D(tex, uv) * a;
+            }
+        `);
+    }
+});
 
 // Parses a CSS colour string to 0-255 channels, or the fallback on failure.
 function parseColor(str, fallback) {
@@ -50,6 +76,7 @@ export class Ticker {
         this._dotSize = 6;
         this._hideInactiveDots = false;
         this._innerWidth = 0;
+        this._blurActor = null;
 
         // Not reactive and added straight to uiGroup rather than as chrome,
         // so it never takes input or changes struts.
@@ -106,6 +133,8 @@ export class Ticker {
         // feedback and screen transitions, which sit above modalDialogGroup.
         Main.layoutManager.uiGroup.set_child_below_sibling(this._pill,
             Main.layoutManager.modalDialogGroup);
+        if (this._blurActor)
+            Main.layoutManager.uiGroup.set_child_below_sibling(this._blurActor, this._pill);
         // Show before easing: St.Adjustment.ease runs with duration 0 while
         // its actor is unmapped, so a hidden pill would snap instead of slide.
         this._pill.show();
@@ -136,6 +165,8 @@ export class Ticker {
             this._hideId = 0;
         }
         this._position.remove_transition('value');
+        this._blurActor?.destroy();
+        this._blurActor = null;
         this._pill.destroy();
         this._pill = null;
         this._strip = null;
@@ -159,9 +190,67 @@ export class Ticker {
         this._setLabels(texts, index);
 
         const [, height] = this._pill.get_preferred_height(width);
-        this._pill.set_position(
-            monitor.x + Math.round((monitor.width - width) / 2),
-            this._bottomEdge(monitor) - height);
+        const x = monitor.x + Math.round((monitor.width - width) / 2);
+        const y = this._bottomEdge(monitor) - height;
+        this._pill.set_position(x, y);
+        this._applyBlur(x, y, width, height);
+    }
+
+    // Shell.BlurEffect in BACKGROUND mode reads the framebuffer behind its
+    // actor, which a rounded-corner mask (an offscreen effect) would hide, and
+    // it paints the whole rectangle, so it cannot be masked. Instead the blur
+    // blurs clones of the wallpaper and window groups in ACTOR mode; panel,
+    // dock and other chrome are not in it. Structure, below the pill so its
+    // shadow is not masked: a pill-sized clipping actor carrying the corner
+    // mask (its clip keeps the mask's texture exactly pill-sized, whatever the
+    // blur's own paint volume), holding a larger actor with the blur and the
+    // clones; the larger actor reaches `margin` px past the pill so the pill's
+    // edges blur against real content, not transparency. The pill's
+    // visibility and opacity are bound to the clipping actor.
+    // Created once while blur is on; later builds only move and update it.
+    _applyBlur(x, y, width, height) {
+        if (!this._settings.get_boolean('blur')) {
+            this._blurActor?.destroy();
+            this._blurActor = null;
+            return;
+        }
+        if (!this._blurActor) {
+            this._blurActor = new Clutter.Actor({clip_to_allocation: true});
+            this._maskEffect = new CornerMaskEffect();
+            this._blurActor.add_effect(this._maskEffect);
+            this._blurInner = new Clutter.Actor();
+            this._blurEffect = new Shell.BlurEffect({
+                mode: Shell.BlurMode.ACTOR,
+                brightness: 1.0,
+            });
+            this._blurInner.add_effect(this._blurEffect);
+            this._blurActor.add_child(this._blurInner);
+            this._clones = [Main.layoutManager._backgroundGroup, global.window_group].map(source => {
+                const clone = new Clutter.Clone({source});
+                this._blurInner.add_child(clone);
+                return clone;
+            });
+            Main.layoutManager.uiGroup.insert_child_below(this._blurActor, this._pill);
+            for (const prop of ['visible', 'opacity'])
+                this._pill.bind_property(prop, this._blurActor, prop,
+                    GObject.BindingFlags.SYNC_CREATE);
+        }
+        const blurRadius = this._settings.get_int('blur-radius') * this._scale;
+        const margin = Math.ceil(blurRadius * 2);
+        this._blurActor.set_position(x, y);
+        this._blurActor.set_size(width, height);
+        this._blurInner.set_position(-margin, -margin);
+        this._blurInner.set_size(width + 2 * margin, height + 2 * margin);
+        // Clones are placed so the scene lines up with the stage.
+        this._clones.forEach(clone => clone.set_position(-(x - margin), -(y - margin)));
+        this._blurEffect.radius = blurRadius;
+        // Same clamp St applies to the pill's border-radius. Nudged off whole
+        // numbers so GJS marshals doubles for the float uniforms.
+        const radius = Math.min(this._settings.get_int('corner-radius') * this._scale,
+            width / 2, height / 2);
+        this._maskEffect.set_uniform_value('width', width - 1e-6);
+        this._maskEffect.set_uniform_value('height', height - 1e-6);
+        this._maskEffect.set_uniform_value('radius', radius - 1e-6);
     }
 
     // Pill bottom in stage coordinates: above a bottom dock when asked to,
