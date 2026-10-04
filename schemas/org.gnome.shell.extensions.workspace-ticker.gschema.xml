@@ -55,5 +55,45 @@
       with the workspace's number, counting from 1. Left blank, the number
       alone is shown.</description>
     </key>
+
+    <key name="use-custom-colors" type="b">
+      <default>false</default>
+      <summary>Use custom colours</summary>
+      <description>Off, the strip uses the look from stylesheet.css. On, the
+      colour keys below are applied.</description>
+    </key>
+
+    <key name="pill-color" type="s">
+      <default>'rgb(30,30,30)'</default>
+      <summary>Background colour of the pill</summary>
+      <description>CSS colour string. Only its RGB is used; the opacity comes
+      from pill-opacity.</description>
+    </key>
+
+    <key name="pill-opacity" type="d">
+      <default>0.85</default>
+      <range min="0.0" max="1.0"/>
+      <summary>Opacity of the pill background</summary>
+      <description>0.0 is fully transparent, 1.0 fully opaque.</description>
+    </key>
+
+    <key name="name-color" type="s">
+      <default>'rgb(255,255,255)'</default>
+      <summary>Colour of the current name</summary>
+      <description>CSS colour string.</description>
+    </key>
+
+    <key name="neighbour-color" type="s">
+      <default>'rgb(255,255,255)'</default>
+      <summary>Colour of the neighbouring names</summary>
+      <description>CSS colour string, may carry alpha. The name blends from
+      this to the current-name colour as it slides into the centre.</description>
+    </key>
+
+    <key name="dot-color" type="s">
+      <default>'rgb(255,255,255)'</default>
+      <summary>Colour of the position dots</summary>
+      <description>CSS colour string, may carry alpha.</description>
+    </key>
   </schema>
 </schemalist>

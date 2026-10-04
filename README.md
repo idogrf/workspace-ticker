@@ -51,6 +51,18 @@ vertically centred whether the dots are on or off: the pill has equal padding
 above and below (16 px with dots, 10 px without) and the dots sit inside the
 bottom padding rather than adding a row under the name.
 
+### Colours
+
+Off by default: the look then comes entirely from `stylesheet.css`. The
+Colours page of the preferences has a "Custom colours" expander whose switch
+turns `use-custom-colors` on and reveals the pickers (background, current name,
+neighbour names, dots) and the background opacity. When on, the pill and dots
+get an inline background colour. Label colours are not styled: the neighbour
+colour blends into the current-name colour as a name slides into the centre,
+with the same factor as the scale, and is set per frame on the label's text
+actor (no restyling). Neighbour and dot colours may carry alpha; the edge fade
+is separate from it.
+
 Two details that are easy to get wrong:
 
 - **The pill is shown before easing.** GNOME skips animations on unmapped
@@ -82,6 +94,12 @@ Gear icon in Extensions Manager. All are live, no logout.
 | Font size of the current name (px, 12-72) | `font-size` | `24` |
 | Strip width (multiples of the font size, 4.0-20.0) | `strip-width-em` | `7.5` |
 | Show the position dots under the name | `show-dots` | `true` |
+| Use the colours below instead of the theme's look | `use-custom-colors` | `false` |
+| Pill background colour (RGB; alpha ignored) | `pill-color` | `rgb(30,30,30)` |
+| Pill background opacity (0.0-1.0) | `pill-opacity` | `0.85` |
+| Colour of the current name | `name-color` | `rgb(255,255,255)` |
+| Colour of the neighbouring names (may carry alpha) | `neighbour-color` | `rgb(255,255,255)` |
+| Colour of the position dots (may carry alpha) | `dot-color` | `rgb(255,255,255)` |
 | Label for unnamed workspaces | `unnamed-format` | `{number}` |
 
 A blank `unnamed-format` falls back to the bare number, never a blank label.

@@ -1,5 +1,7 @@
 import Clutter from 'gi://Clutter';
+import Cogl from 'gi://Cogl';
 import GLib from 'gi://GLib';
+import Pango from 'gi://Pango';
 import St from 'gi://St';
 
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
@@ -10,6 +12,12 @@ const FADE_IN_MS = 100;
 const FADE_OUT_MS = 250;
 // Vertical padding of .workspace-ticker-pill.with-dots in stylesheet.css.
 const DOTS_PADDING = 16;
+
+// Parses a CSS colour string to 0-255 channels, or the fallback on failure.
+function parseColor(str, fallback) {
+    const [ok, c] = Cogl.Color.from_string(str);
+    return ok ? [c.red, c.green, c.blue, c.alpha] : fallback;
+}
 
 /**
  * The pill at the bottom of the screen and the strip of names inside it.
@@ -28,6 +36,9 @@ export class Ticker {
         this._widths = [];
         this._texts = [];
         this._hideId = 0;
+        this._custom = false;
+        this._nameColor = null;
+        this._neighbourColor = null;
 
         // Not reactive and added straight to uiGroup rather than as chrome,
         // so it never takes input or changes struts.
@@ -164,11 +175,43 @@ export class Ticker {
             return dot;
         }) : [];
 
+        this._applyColors();
+
         this._position.remove_transition('value');
         this._position.upper = Math.max(texts.length - 1, 0);
         this._position.value = index;
         // Setting the same value emits no notify, so lay out explicitly.
         this._relayout();
+    }
+
+    // Pill and dots get an inline style here, once. Label colours are not
+    // styled: they are parsed and lerped per frame in _relayout, because
+    // set_style would re-resolve the theme node on every frame. Called only
+    // from _setLabels, so a style change never resets the text colour
+    // mid-animation.
+    _applyColors() {
+        this._custom = this._settings.get_boolean('use-custom-colors');
+        if (!this._custom) {
+            this._pill.set_style(null);
+            this._dots.forEach(dot => dot.set_style(null));
+            return;
+        }
+        const [r, g, b] = parseColor(this._settings.get_string('pill-color'), [30, 30, 30]);
+        const opacity = this._settings.get_double('pill-opacity');
+        this._pill.set_style(`background-color: rgba(${r},${g},${b},${opacity});`);
+        const [dr, dg, db, da] = parseColor(this._settings.get_string('dot-color'),
+            [255, 255, 255, 255]);
+        this._dots.forEach(dot =>
+            dot.set_style(`background-color: rgba(${dr},${dg},${db},${da / 255});`));
+        this._nameColor = parseColor(this._settings.get_string('name-color'),
+            [255, 255, 255, 255]);
+        this._neighbourColor = parseColor(this._settings.get_string('neighbour-color'),
+            [255, 255, 255, 255]);
+        // The pill's new style invalidates its children's theme nodes, and St
+        // resets a label's text colour when they re-resolve. Resolve them now
+        // so that happens before _relayout sets the colours, not after.
+        this._pill.ensure_style();
+        this._labels.forEach(label => label.ensure_style());
     }
 
     // Labels are moved with translation_x and set_scale only, never by
@@ -182,6 +225,23 @@ export class Ticker {
             label.set_scale(scale, scale);
             label.opacity = opacity;
         });
+
+        // Neighbour colour blends to the name colour with the same k as the
+        // scale and the dots.
+        if (this._custom) {
+            const p = this._position.value;
+            this._labels.forEach((label, i) => {
+                const k = Math.max(0, 1 - Math.abs(i - p));
+                const [n, m] = [this._neighbourColor, this._nameColor];
+                const mix = c => Math.round(n[c] + (m[c] - n[c]) * k);
+                // clutter_text.color is not enough: St gives the text a Pango
+                // foreground attribute from the theme, which wins over it.
+                const attrs = new Pango.AttrList();
+                attrs.insert(Pango.attr_foreground_new(mix(0) * 257, mix(1) * 257, mix(2) * 257));
+                attrs.insert(Pango.attr_foreground_alpha_new(mix(3) * 257));
+                label.clutter_text.attributes = attrs;
+            });
+        }
 
         // Same fractional position as the names, so the wide dot slides in step.
         const p = this._position.value;
