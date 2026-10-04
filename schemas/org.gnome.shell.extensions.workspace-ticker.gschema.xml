@@ -164,5 +164,38 @@
       <summary>Colour of the position dots</summary>
       <description>CSS colour string, may carry alpha.</description>
     </key>
+
+    <key name="border-width" type="i">
+      <default>0</default>
+      <range min="0" max="6"/>
+      <summary>Border width of the pill, in pixels</summary>
+      <description>0 draws no border.</description>
+    </key>
+
+    <key name="border-color" type="s">
+      <default>'rgba(255,255,255,0.3)'</default>
+      <summary>Border colour of the pill</summary>
+      <description>CSS colour string, may carry alpha.</description>
+    </key>
+
+    <key name="shadow" type="b">
+      <default>false</default>
+      <summary>Drop shadow under the pill</summary>
+      <description>Draws a soft shadow around the pill.</description>
+    </key>
+
+    <key name="dot-size" type="i">
+      <default>6</default>
+      <range min="4" max="12"/>
+      <summary>Size of the position dots, in pixels</summary>
+      <description>Height of a dot. The current dot is wider, in proportion.</description>
+    </key>
+
+    <key name="hide-inactive-dots" type="b">
+      <default>false</default>
+      <summary>Show only the current dot</summary>
+      <description>Hides the dots of the other workspaces, leaving just the
+      current one, which fades in and out with the slide.</description>
+    </key>
   </schema>
 </schemalist>

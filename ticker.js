@@ -10,8 +10,6 @@ import {computeLayout, GAP_RATIO} from './layout.js';
 
 const FADE_IN_MS = 100;
 const FADE_OUT_MS = 250;
-// Extra vertical padding, in CSS px, that makes room for the dot row.
-const DOTS_EXTRA_PADDING = 6;
 
 // Parses a CSS colour string to 0-255 channels, or the fallback on failure.
 function parseColor(str, fallback) {
@@ -48,23 +46,34 @@ export class Ticker {
         // setting per frame.
         this._neighbourScale = 0.6;
         this._neighbourOpacity = 1;
+        // Dot options, cached for _relayout.
+        this._dotSize = 6;
+        this._hideInactiveDots = false;
+        this._innerWidth = 0;
 
         // Not reactive and added straight to uiGroup rather than as chrome,
         // so it never takes input or changes struts.
         this._pill = new St.Widget({
             style_class: 'workspace-ticker-pill',
             reactive: false,
-            clip_to_allocation: true,
             opacity: 0,
             visible: false,
             layout_manager: new Clutter.BinLayout(),
         });
-        this._strip = new Clutter.Actor({x_expand: true, y_expand: true});
+        // The strip clips the names at the pill's edges, not the pill, so the
+        // pill's own drop shadow is not cut off. Horizontal padding is 0, so
+        // the strip spans the pill's width inside the border.
+        this._strip = new Clutter.Actor({
+            x_expand: true,
+            y_expand: true,
+            clip_to_allocation: true,
+        });
         this._pill.add_child(this._strip);
         // Pinned to the bottom, inside the pill's bottom padding, so it never
         // moves the name off the vertical centre. The pill's padding shrinks
         // the area a child is laid out in, so _setLabels pushes the row down
-        // by the effective padding to sit 5px above the pill's real bottom edge.
+        // by the effective padding to sit 5px above the pill's inner bottom edge
+        // (the content box already excludes the border).
         this._dotRow = new St.BoxLayout({
             style: 'spacing: 6px;',
             x_align: Clutter.ActorAlign.CENTER,
@@ -201,7 +210,10 @@ export class Ticker {
             style += ' font-weight: bold;';
         // The current name is full size, so it must fit the pill with a gap
         // either side; anything longer is ellipsized.
-        const cap = Math.max(this._pill.width - 2 * GAP_RATIO * this._fontPx, 1);
+        // The border narrows the strip, so measure against its width.
+        this._innerWidth = this._pill.width -
+            2 * this._settings.get_int('border-width') * this._scale;
+        const cap = Math.max(this._innerWidth - 2 * GAP_RATIO * this._fontPx, 1);
         this._texts = texts;
         this._labels = texts.map(text => {
             const label = new St.Label({
@@ -224,8 +236,10 @@ export class Ticker {
         this._widths = this._labels.map(label => label.get_preferred_width(-1)[1]);
 
         const showDots = this._settings.get_boolean('show-dots');
-        const padding = this._settings.get_int('padding') +
-            (showDots ? DOTS_EXTRA_PADDING : 0);
+        const dotSize = this._settings.get_int('dot-size');
+        this._dotSize = dotSize;
+        this._hideInactiveDots = this._settings.get_boolean('hide-inactive-dots');
+        const padding = this._settings.get_int('padding') + (showDots ? dotSize : 0);
         this._dotRow.margin_bottom = 5 * this._scale;
         this._dotRow.translation_y = showDots ? padding * this._scale : 0;
         this._dotRow.destroy_all_children();
@@ -257,16 +271,28 @@ export class Ticker {
             : [30, 30, 30];
         const opacity = this._settings.get_double('pill-opacity');
         const radius = this._settings.get_int('corner-radius');
-        this._pill.set_style(`background-color: rgba(${r},${g},${b},${opacity}); ` +
-            `border-radius: ${radius}px; padding: ${padding}px 0;`);
-        if (!this._custom) {
-            this._dots.forEach(dot => dot.set_style(null));
-            return;
+        let style = `background-color: rgba(${r},${g},${b},${opacity}); ` +
+            `border-radius: ${radius}px; padding: ${padding}px 0;`;
+        const borderWidth = this._settings.get_int('border-width');
+        if (borderWidth > 0) {
+            const [br, bg, bb, ba] = parseColor(this._settings.get_string('border-color'),
+                [255, 255, 255, 77]);
+            style += ` border: ${borderWidth}px solid rgba(${br},${bg},${bb},${ba / 255});`;
         }
-        const [dr, dg, db, da] = parseColor(this._settings.get_string('dot-color'),
-            [255, 255, 255, 255]);
-        this._dots.forEach(dot =>
-            dot.set_style(`background-color: rgba(${dr},${dg},${db},${da / 255});`));
+        if (this._settings.get_boolean('shadow'))
+            style += ' box-shadow: 0 2px 10px rgba(0,0,0,0.5);';
+        this._pill.set_style(style);
+
+        // Size and shape of every dot, merged with the custom colour.
+        let dotStyle = `height: ${this._dotSize}px; border-radius: ${this._dotSize / 2}px;`;
+        if (this._custom) {
+            const [dr, dg, db, da] = parseColor(this._settings.get_string('dot-color'),
+                [255, 255, 255, 255]);
+            dotStyle += ` background-color: rgba(${dr},${dg},${db},${da / 255});`;
+        }
+        this._dots.forEach(dot => dot.set_style(dotStyle));
+        if (!this._custom)
+            return;
         this._nameColor = parseColor(this._settings.get_string('name-color'),
             [255, 255, 255, 255]);
         this._neighbourColor = parseColor(this._settings.get_string('neighbour-color'),
@@ -282,7 +308,7 @@ export class Ticker {
     // changing their text or size, so nothing is re-measured per frame.
     _relayout() {
         const items = computeLayout(this._widths, this._position.value,
-            this._fontPx, this._pill.width, {
+            this._fontPx, this._innerWidth, {
                 neighbourScale: this._neighbourScale,
                 neighbourOpacity: this._neighbourOpacity,
             });
@@ -320,8 +346,8 @@ export class Ticker {
         const p = this._position.value;
         this._dots.forEach((dot, i) => {
             const k = Math.max(0, 1 - Math.abs(i - p));
-            dot.width = (6 + 10 * k) * this._scale;
-            dot.opacity = Math.round(255 * (0.4 + 0.6 * k));
+            dot.width = this._dotSize * (1 + 5 / 3 * k) * this._scale;
+            dot.opacity = Math.round(255 * (this._hideInactiveDots ? k : 0.4 + 0.6 * k));
         });
     }
 

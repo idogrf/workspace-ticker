@@ -51,14 +51,19 @@ dynamic spare gets none) shows where you are out of how many. Each dot's width
 and opacity come from the same fractional position as the names, in the same
 `_relayout()` call, so the wide dot moves in step with the slide. The name is
 vertically centred whether the dots are on or off: the pill has equal padding
-above and below (`padding` px, plus 6 with dots, set inline) and the dots sit inside the
-bottom padding rather than adding a row under the name.
+above and below (`padding` px, plus `dot-size` with dots, set inline) and the dots sit inside the
+bottom padding rather than adding a row under the name. A dot is `dot-size` px high and
+`dot-size` x (1 + 5/3 x k) wide (6 to 16 px by default); with `hide-inactive-dots` only the
+current one is visible, its opacity following k as it slides in and out.
 
 ### Appearance
 
 Background opacity, corner radius and inner padding always apply: `ticker.js`
 sets them inline on the pill (`background-color`, `border-radius`, `padding`)
 every time the labels are rebuilt, and `stylesheet.css` keeps only fallbacks.
+A border (`border-width` > 0, in `border-color`) and a drop shadow (`shadow`) are added to
+the same inline style. The names are clipped by the strip inside the pill, not by the pill,
+so the shadow is not cut off; the border narrows the strip, and the layout centres on that.
 The radius is clamped by St to half the pill's height, so the default of 100
 gives fully round ends. Colours are separate: they are off by default, and
 the Appearance page's "Custom colours" expander has a switch that turns
@@ -121,9 +126,14 @@ Gear icon in Extensions Manager. All are live, no logout.
 | Opacity of the neighbouring names (0.2-1.0; 1.0 is no dimming) | `neighbour-opacity` | `1.0` |
 | Prefix named workspaces with their number, "2 · Name" | `show-number` | `false` |
 | Strip width (multiples of the font size, 4.0-20.0) | `strip-width-em` | `7.5` |
-| Inner padding above and below the name (px, 0-30; 6 more with dots) | `padding` | `10` |
+| Inner padding above and below the name (px, 0-30; `dot-size` more with dots) | `padding` | `10` |
 | Corner radius of the pill (px, 0-100; larger than half the height gives round ends) | `corner-radius` | `100` |
 | Show the position dots under the name | `show-dots` | `true` |
+| Size of the position dots (px, 4-12) | `dot-size` | `6` |
+| Show only the current dot | `hide-inactive-dots` | `false` |
+| Border width of the pill (px, 0-6; 0 is none) | `border-width` | `0` |
+| Border colour (may carry alpha) | `border-color` | `rgba(255,255,255,0.3)` |
+| Drop shadow under the pill | `shadow` | `false` |
 | Use the colours below instead of the default colours | `use-custom-colors` | `false` |
 | Pill background colour (RGB; alpha ignored) | `pill-color` | `rgb(30,30,30)` |
 | Pill background opacity (0.0-1.0), always applies | `pill-opacity` | `0.4` |

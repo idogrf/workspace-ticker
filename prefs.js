@@ -232,6 +232,41 @@ export default class WorkspaceTickerPreferences extends ExtensionPreferences {
         });
         this._handlerIds.push(settings.connect('changed::pill-opacity', loadOpacity));
         group.add(opacityRow);
+
+        const borderRow = this._spinRow(settings, 'border-width', 'Border width',
+            'Pixels. 0 draws no border.', 0, 6, 1);
+        group.add(borderRow);
+        const borderButton = new Gtk.ColorDialogButton({
+            dialog: new Gtk.ColorDialog({with_alpha: true}),
+            valign: Gtk.Align.CENTER,
+        });
+        const loadBorder = () => {
+            const rgba = new Gdk.RGBA();
+            if (rgba.parse(settings.get_string('border-color')) && !rgba.equal(borderButton.rgba))
+                borderButton.rgba = rgba;
+        };
+        loadBorder();
+        borderButton.connect('notify::rgba', () => {
+            const str = borderButton.rgba.to_string();
+            if (str !== settings.get_string('border-color'))
+                settings.set_string('border-color', str);
+        });
+        this._handlerIds.push(settings.connect('changed::border-color', loadBorder));
+        const borderColorRow = new Adw.ActionRow({
+            title: 'Border colour',
+            activatable_widget: borderButton,
+        });
+        borderColorRow.add_suffix(borderButton);
+        const updateBorderSensitive = () => {
+            borderColorRow.sensitive = settings.get_int('border-width') > 0;
+        };
+        updateBorderSensitive();
+        this._handlerIds.push(settings.connect('changed::border-width', updateBorderSensitive));
+        group.add(borderColorRow);
+
+        const shadowRow = new Adw.SwitchRow({title: 'Drop shadow'});
+        settings.bind('shadow', shadowRow, 'active', Gio.SettingsBindFlags.DEFAULT);
+        group.add(shadowRow);
         return group;
     }
 
@@ -240,6 +275,15 @@ export default class WorkspaceTickerPreferences extends ExtensionPreferences {
         const dotsRow = new Adw.SwitchRow({title: 'Show position dots'});
         settings.bind('show-dots', dotsRow, 'active', Gio.SettingsBindFlags.DEFAULT);
         group.add(dotsRow);
+        const sizeRow = this._spinRow(settings, 'dot-size', 'Dot size',
+            'Pixels. The current dot is wider.', 4, 12, 1);
+        settings.bind('show-dots', sizeRow, 'sensitive', Gio.SettingsBindFlags.GET);
+        group.add(sizeRow);
+        const onlyCurrentRow = new Adw.SwitchRow({title: 'Show only the current dot'});
+        settings.bind('hide-inactive-dots', onlyCurrentRow, 'active',
+            Gio.SettingsBindFlags.DEFAULT);
+        settings.bind('show-dots', onlyCurrentRow, 'sensitive', Gio.SettingsBindFlags.GET);
+        group.add(onlyCurrentRow);
         return group;
     }
 
