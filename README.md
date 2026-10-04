@@ -64,13 +64,15 @@ every time the labels are rebuilt, and `stylesheet.css` keeps only fallbacks.
 A border (`border-width` > 0, in `border-color`) and a drop shadow (`shadow`) are added to
 the same inline style. The names are clipped by the strip inside the pill, not by the pill,
 so the shadow is not cut off; the border narrows the strip, and the layout centres on that.
-With `blur` on, a separate actor stacked just below the pill holds clones of the wallpaper
-and window groups, blurred by a `Shell.BlurEffect` (actor mode, radius `blur-radius` x the
-scale factor) and cut to the pill's rounded shape by a `Clutter.ShaderEffect` at the same
+With `blur` on, a separate actor stacked just below the pill holds a clone of the window
+group (wallpaper included), blurred by a `Shell.BlurEffect` (actor mode, radius `blur-radius` x
+the scale factor) and cut to the pill's rounded shape by a `Clutter.ShaderEffect` at the same
 radius. `Shell.BlurEffect` has no corner support, and its background mode cannot be masked, so
-the panel, dock and other chrome are not part of the blur. The blur only shows through the
-translucent background, so it works best with a low opacity. The effects are created once and
-only updated on later rebuilds.
+the blur is of the wallpaper and windows only: where the pill overlaps the panel, the dock, a
+banner or an on-screen display, the blurred wallpaper and windows cover them. During a
+workspace switch the slide's own group is cloned too, so the blur follows the slide. The blur
+only shows through the translucent background, so it works best with a low opacity. The
+effects are created once and only updated on later rebuilds.
 The radius is clamped by St to half the pill's height, so the default of 100
 gives fully round ends. Colours are separate: they are off by default, and
 the Appearance page's "Custom colours" expander has a switch that turns

@@ -15,7 +15,7 @@ const FADE_OUT_MS = 250;
 
 // Shell.BlurEffect blurs its actor's whole rectangle and has no corner support,
 // so a shader after it zeroes the alpha outside the corner arcs (half-pixel
-// feather). Clutter.ShaderEffect.set_shader_source exists in GNOME 48-50.
+// feather centred on the edge). Clutter.ShaderEffect.set_shader_source exists in GNOME 48-50.
 const CornerMaskEffect = GObject.registerClass(
 class CornerMaskEffect extends Clutter.ShaderEffect {
     constructor() {
@@ -30,7 +30,7 @@ class CornerMaskEffect extends Clutter.ShaderEffect {
                 vec2 size = vec2(width, height);
                 vec2 uv = cogl_tex_coord_in[0].xy;
                 vec2 d = max(vec2(radius) - min(uv * size, size - uv * size), vec2(0.0));
-                float a = clamp(radius - length(d) + 0.5, 0.0, 1.0);
+                float a = clamp(radius - length(d), 0.0, 1.0);
                 cogl_color_out = texture2D(tex, uv) * a;
             }
         `);
@@ -78,6 +78,14 @@ export class Ticker {
         this._hideInactiveDots = false;
         this._innerWidth = 0;
         this._blurActor = null;
+        this._blurInner = null;
+        this._blurEffect = null;
+        this._maskEffect = null;
+        this._windowClone = null;
+        this._blurBindings = [];
+        this._blurClones = [];
+        this._blurOffset = [0, 0];
+        this._blurUiId = 0;
 
         // Not reactive and added straight to uiGroup rather than as chrome,
         // so it never takes input or changes struts.
@@ -134,8 +142,10 @@ export class Ticker {
         // feedback and screen transitions, which sit above modalDialogGroup.
         Main.layoutManager.uiGroup.set_child_below_sibling(this._pill,
             Main.layoutManager.modalDialogGroup);
-        if (this._blurActor)
+        if (this._blurActor) {
             Main.layoutManager.uiGroup.set_child_below_sibling(this._blurActor, this._pill);
+            this._cloneSwitchGroups();
+        }
         // Show before easing: St.Adjustment.ease runs with duration 0 while
         // its actor is unmapped, so a hidden pill would snap instead of slide.
         this._pill.show();
@@ -182,8 +192,7 @@ export class Ticker {
             this._hideId = 0;
         }
         this._position.remove_transition('value');
-        this._blurActor?.destroy();
-        this._blurActor = null;
+        this._removeBlur();
         this._pill.destroy();
         this._pill = null;
         this._strip = null;
@@ -216,7 +225,7 @@ export class Ticker {
     // Shell.BlurEffect in BACKGROUND mode reads the framebuffer behind its
     // actor, which a rounded-corner mask (an offscreen effect) would hide, and
     // it paints the whole rectangle, so it cannot be masked. Instead the blur
-    // blurs clones of the wallpaper and window groups in ACTOR mode; panel,
+    // blurs a clone of the window group (wallpaper included) in ACTOR mode; panel,
     // dock and other chrome are not in it. Structure, below the pill so its
     // shadow is not masked: a pill-sized clipping actor carrying the corner
     // mask (its clip keeps the mask's texture exactly pill-sized, whatever the
@@ -227,8 +236,7 @@ export class Ticker {
     // Created once while blur is on; later builds only move and update it.
     _applyBlur(x, y, width, height) {
         if (!this._settings.get_boolean('blur')) {
-            this._blurActor?.destroy();
-            this._blurActor = null;
+            this._removeBlur();
             return;
         }
         if (!this._blurActor) {
@@ -242,15 +250,15 @@ export class Ticker {
             });
             this._blurInner.add_effect(this._blurEffect);
             this._blurActor.add_child(this._blurInner);
-            this._clones = [Main.layoutManager._backgroundGroup, global.window_group].map(source => {
-                const clone = new Clutter.Clone({source});
-                this._blurInner.add_child(clone);
-                return clone;
-            });
+            this._windowClone = new Clutter.Clone({source: global.window_group});
+            this._blurInner.add_child(this._windowClone);
             Main.layoutManager.uiGroup.insert_child_below(this._blurActor, this._pill);
-            for (const prop of ['visible', 'opacity'])
+            this._blurBindings = ['visible', 'opacity'].map(prop =>
                 this._pill.bind_property(prop, this._blurActor, prop,
-                    GObject.BindingFlags.SYNC_CREATE);
+                    GObject.BindingFlags.SYNC_CREATE));
+            this._blurUiId = Main.layoutManager.uiGroup.connect('child-added',
+                () => this._cloneSwitchGroups());
+            this._cloneSwitchGroups();
         }
         const blurRadius = this._settings.get_int('blur-radius') * this._scale;
         const margin = Math.ceil(blurRadius * 2);
@@ -259,7 +267,10 @@ export class Ticker {
         this._blurInner.set_position(-margin, -margin);
         this._blurInner.set_size(width + 2 * margin, height + 2 * margin);
         // Clones are placed so the scene lines up with the stage.
-        this._clones.forEach(clone => clone.set_position(-(x - margin), -(y - margin)));
+        this._blurOffset = [-(x - margin), -(y - margin)];
+        this._windowClone.set_position(...this._blurOffset);
+        this._blurClones.forEach(({constraints}) =>
+            constraints.forEach((c, i) => c.set_offset(this._blurOffset[i])));
         this._blurEffect.radius = blurRadius;
         // Same clamp St applies to the pill's border-radius. Nudged off whole
         // numbers so GJS marshals doubles for the float uniforms.
@@ -268,6 +279,52 @@ export class Ticker {
         this._maskEffect.set_uniform_value('width', width - 1e-6);
         this._maskEffect.set_uniform_value('height', height - 1e-6);
         this._maskEffect.set_uniform_value('radius', radius - 1e-6);
+    }
+
+    // While a workspace switch animates, the shell puts an opaque MonitorGroup
+    // (style class 'workspace-animation') above window_group, and mutter has
+    // already activated the target workspace, so window_group alone would show
+    // the destination during the slide. Clone each such group above the window
+    // clone, bound to its position, so the blur follows the slide. Called when
+    // the blur is created, in show(), and for every new uiGroup child.
+    _cloneSwitchGroups() {
+        if (!this._blurInner)
+            return;
+        for (const source of Main.layoutManager.uiGroup.get_children()) {
+            if (!source.has_style_class_name?.('workspace-animation') ||
+                this._blurClones.some(c => c.source === source))
+                continue;
+            const clone = new Clutter.Clone({source});
+            const constraints = [Clutter.BindCoordinate.X, Clutter.BindCoordinate.Y].map(
+                (coordinate, i) => new Clutter.BindConstraint({
+                    source, coordinate, offset: this._blurOffset[i],
+                }));
+            constraints.forEach(c => clone.add_constraint(c));
+            this._blurInner.add_child(clone);
+            const entry = {source, clone, constraints, id: 0};
+            entry.id = source.connect('destroy', () => {
+                this._blurClones = this._blurClones.filter(c => c !== entry);
+                clone.destroy();
+            });
+            this._blurClones.push(entry);
+        }
+    }
+
+    _removeBlur() {
+        if (this._blurUiId) {
+            Main.layoutManager.uiGroup.disconnect(this._blurUiId);
+            this._blurUiId = 0;
+        }
+        this._blurClones.forEach(({source, id}) => source.disconnect(id));
+        this._blurClones = [];
+        this._blurBindings.forEach(binding => binding.unbind());
+        this._blurBindings = [];
+        this._blurActor?.destroy();
+        this._blurActor = null;
+        this._blurInner = null;
+        this._blurEffect = null;
+        this._maskEffect = null;
+        this._windowClone = null;
     }
 
     // Pill bottom in stage coordinates: above a bottom dock when asked to,
