@@ -60,6 +60,9 @@ export class Ticker {
             this._build(monitor, texts, Math.min(this._position.value, texts.length - 1));
 
         Main.layoutManager.uiGroup.set_child_above_sibling(this._pill, null);
+        // Show before easing: St.Adjustment.ease runs with duration 0 while
+        // its actor is unmapped, so a hidden pill would snap instead of slide.
+        this._pill.show();
 
         const animation = this._settings.get_int('animation-duration');
         this._position.remove_transition('value');
@@ -68,7 +71,6 @@ export class Ticker {
             mode: Clutter.AnimationMode.EASE_OUT_CUBIC,
         });
 
-        this._pill.show();
         this._pill.ease({
             opacity: 255,
             duration: FADE_IN_MS,
