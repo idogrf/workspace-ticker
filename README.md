@@ -5,6 +5,8 @@ the screen whenever you switch workspaces. The current name is large and
 centred, its neighbours smaller on either side. The strip slides to the new
 workspace, holds for a moment, then fades out.
 
+![Switching through five workspaces: the strip slides from name to name, then fades out](docs/images/switching.webp)
+
 ## Why this exists
 
 GNOME's workspace switch popup shows only dots, so with more than a couple of
@@ -115,6 +117,8 @@ window sets; the extension resets it the next time it is enabled (login or unloc
 preferences crash can leave the pill pinned until preferences is opened and
 closed again or the extension is re-enabled.
 
+![The Appearance page, with the preview pill pinned below it](docs/images/preferences.png)
+
 ## Placement
 
 By default the strip sits `dock-gap` pixels above the dock. It looks for Dash
@@ -129,6 +133,10 @@ changed, and is looked up again on every show.
 ## Settings
 
 Gear icon in Extensions Manager. All are live, no logout.
+
+| Default | Blur, border and shadow | Custom colors, bold, current dot only |
+|---|---|---|
+| ![Default pill](docs/images/style-default.png) | ![Pill with blur, border and shadow](docs/images/style-blur.png) | ![Pill with custom colors and bold names](docs/images/style-colors.png) |
 
 | Setting | Key | Default |
 |---|---|---|
